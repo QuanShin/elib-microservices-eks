@@ -1,0 +1,13 @@
+bin/
+obj/
+node_modules/
+dist/
+.vs/
+.vscode/
+.env
+.env.*
+*.user
+*.suo
+coverage/
+.git-credentials
+Dockerfile.*.local
