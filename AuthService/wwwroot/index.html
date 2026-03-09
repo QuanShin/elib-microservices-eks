@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>E-Library Auth</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body>
+  <main class="wrap">
+    <section class="card">
+      <div class="top">
+        <div class="logo">
+          <div class="dot"></div>
+          <div>
+            <div class="title">E-Library</div>
+            <div class="subtitle">Authentication Gateway</div>
+          </div>
+        </div>
+        <span class="chip" id="envChip">LOCAL</span>
+      </div>
+
+      <p class="muted">
+        Enterprise-style auth: RS256 JWT, JWKS, HttpOnly refresh cookie, CSRF protected refresh/logout.
+      </p>
+
+      <!-- LOGIN / REGISTER VIEW -->
+      <div id="authView">
+        <div class="tabs">
+          <button id="tabLogin" class="tab active" type="button">Login</button>
+          <button id="tabRegister" class="tab" type="button">Register</button>
+        </div>
+
+        <label>Email</label>
+        <input id="email" type="email" autocomplete="username" placeholder="you@example.com" />
+
+        <label>Password</label>
+        <div class="row">
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+          <button id="togglePw" class="btn secondary smallBtn" type="button">Show</button>
+        </div>
+
+        <div id="confirmWrap" style="display:none;">
+          <label>Confirm Password</label>
+          <input id="password2" type="password" autocomplete="new-password" placeholder="••••••••" />
+        </div>
+
+        <button id="btnSubmit" class="btn primary" type="button">Login</button>
+
+        <div id="msgError" class="msg error" style="display:none;"></div>
+        <div id="msgOk" class="msg ok" style="display:none;"></div>
+
+        <div class="hint">
+          Tip: set <span class="code">AccessTokenMinutes</span> to <span class="code">1</span> to observe expiry quickly.
+        </div>
+      </div>
+
+      <!-- LOGGED IN VIEW -->
+      <div id="loggedInView" style="display:none;">
+        <div class="panel">
+          <div class="panelHead">
+            <div class="panelTitle">Session</div>
+            <div class="panelMeta">
+              <span class="pill">kid: <span id="kidLabel">—</span></span>
+              <span class="pill">exp: <span id="expLabel">—</span></span>
+            </div>
+          </div>
+
+          <div class="profile">
+            <div><b>Email:</b> <span id="meEmail"></span></div>
+            <div><b>Role:</b> <span id="meRole"></span></div>
+            <div><b>User ID:</b> <span id="meSub"></span></div>
+            <div class="countdown">
+              <b>Access token expires in:</b> <span id="tokenCountdown">--:--</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <!-- ✅ NO refresh: will show 401 after expiry -->
+          <button id="btnCheckMe" class="btn secondary" type="button">Check /me (no refresh)</button>
+
+          <!-- ✅ Explicit renew: calls /refresh and updates access token -->
+          <button id="btnRenew" class="btn secondary" type="button">Renew session (/refresh)</button>
+        </div>
+
+        <button id="btnLogout" class="btn danger" type="button">Logout</button>
+
+        <div id="msgOk2" class="msg ok" style="display:none;"></div>
+        <div id="msgError2" class="msg error" style="display:none;"></div>
+
+        <div class="muted small">
+          Evaluation flow: Login → wait until countdown reaches 00:00 → click <b>Check /me</b> (expect 401) → click <b>Renew session</b> (expect success) → Check /me again.
+        </div>
+      </div>
+
+      <div class="footer">
+        <a class="link" href="/health" target="_blank">/health</a>
+        <span class="sep">•</span>
+        <a class="link" href="/.well-known/jwks.json" target="_blank">JWKS</a>
+      </div>
+    </section>
+  </main>
+
+  <script defer src="/js/app.bundle.js?v=10"></script>
+</body>
+</html>
