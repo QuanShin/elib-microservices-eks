@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   auth-service:
     image: elib-auth:latest
@@ -8,25 +6,51 @@ services:
       - "8081:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "${AUTH_DB_CONNECTION}"
+      Jwt__Issuer: "${JWT_ISSUER}"
+      Jwt__Audience: "${JWT_AUDIENCE}"
+      Jwt__AccessTokenMinutes: "15"
+      Jwt__RefreshTokenDays: "14"
+      Jwt__Kid: "${JWT_KID}"
+      Keys__PrivateKeyPath: "/keys/jwt_private.pem"
+      Keys__PublicKeyPath: "/keys/jwt_public.pem"
+    volumes:
+      - ./keys:/keys:ro
 
   catalog-service:
     image: elib-catalog:latest
     container_name: elib-catalog
+    depends_on:
+      - auth-service
     ports:
       - "8082:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "${CATALOG_DB_CONNECTION}"
+      Jwt__Issuer: "${JWT_ISSUER}"
+      Jwt__Audience: "${JWT_AUDIENCE}"
+      Jwt__JwksUrl: "http://auth-service:8080/.well-known/jwks.json"
 
   borrow-service:
     image: elib-borrow:latest
     container_name: elib-borrow
+    depends_on:
+      - auth-service
     ports:
       - "8083:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "${BORROW_DB_CONNECTION}"
+      Jwt__Issuer: "${JWT_ISSUER}"
+      Jwt__Audience: "${JWT_AUDIENCE}"
+      Jwt__JwksUrl: "http://auth-service:8080/.well-known/jwks.json"
 
   web:
     image: elib-web:latest
     container_name: elib-web
+    depends_on:
+      - auth-service
+      - catalog-service
+      - borrow-service
     ports:
       - "8080:8080"

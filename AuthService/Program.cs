@@ -1,44 +1,64 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 
 using AuthService.Data;
 using AuthService.Models;
 
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Keep original JWT claim names ("sub", "email", "role") stable
+// Keep original JWT claim names stable: "sub", "email", "role"
 JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 
-// ---- Database config ----
-string dbHost = builder.Configuration["Database:Host"]!;
-string dbPort = builder.Configuration["Database:Port"] ?? "3306";
-string dbName = builder.Configuration["Database:Name"]!;
-string dbUser = builder.Configuration["Database:User"]!;
-string dbPass = builder.Configuration["Database:Password"]!;
-
-string connStr = $"Server={dbHost};Port={dbPort};Database={dbName};User={dbUser};Password={dbPass};SslMode=Preferred;";
+// -----------------------------
+// Database config
+// Prefer ConnectionStrings:Default from env / secret source
+// -----------------------------
+string connStr = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("Missing ConnectionStrings:Default");
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseMySql(connStr, ServerVersion.AutoDetect(connStr)));
 
-// ---- JWT / RSA config ----
-string issuer = builder.Configuration["Jwt:Issuer"] ?? "elib-auth";
-string audience = builder.Configuration["Jwt:Audience"] ?? "elib-web";
+// -----------------------------
+// JWT / RSA config
+// -----------------------------
+string issuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Missing Jwt:Issuer");
+
+string audience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("Missing Jwt:Audience");
+
 int accessMinutes = int.TryParse(builder.Configuration["Jwt:AccessTokenMinutes"], out var am) ? am : 15;
 int refreshDays = int.TryParse(builder.Configuration["Jwt:RefreshTokenDays"], out var rd) ? rd : 14;
 string kid = builder.Configuration["Jwt:Kid"] ?? "kid1";
 
-string privPath = builder.Configuration["Keys:PrivateKeyPath"]!;
-string pubPath = builder.Configuration["Keys:PublicKeyPath"]!;
+// Support either mounted file paths OR PEM text from environment
+string? privatePem = builder.Configuration["Keys:PrivateKeyPem"];
+string? publicPem = builder.Configuration["Keys:PublicKeyPem"];
 
-string privatePem = File.ReadAllText(privPath);
-string publicPem = File.ReadAllText(pubPath);
+string? privPath = builder.Configuration["Keys:PrivateKeyPath"];
+string? pubPath = builder.Configuration["Keys:PublicKeyPath"];
+
+if (string.IsNullOrWhiteSpace(privatePem))
+{
+    if (string.IsNullOrWhiteSpace(privPath))
+        throw new InvalidOperationException("Missing Keys:PrivateKeyPem or Keys:PrivateKeyPath");
+    privatePem = File.ReadAllText(privPath);
+}
+
+if (string.IsNullOrWhiteSpace(publicPem))
+{
+    if (string.IsNullOrWhiteSpace(pubPath))
+        throw new InvalidOperationException("Missing Keys:PublicKeyPem or Keys:PublicKeyPath");
+    publicPem = File.ReadAllText(pubPath);
+}
 
 RSA rsaPrivate = RSA.Create();
 rsaPrivate.ImportFromPem(privatePem);
@@ -49,7 +69,9 @@ rsaPublic.ImportFromPem(publicPem);
 var signingKey = new RsaSecurityKey(rsaPrivate) { KeyId = kid };
 var verifyKey = new RsaSecurityKey(rsaPublic) { KeyId = kid };
 
-// ---- Auth middleware ----
+// -----------------------------
+// Authentication
+// -----------------------------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -65,7 +87,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.FromSeconds(10)
         };
 
-        // Useful logs for debugging
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = ctx =>
@@ -87,7 +108,7 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 var isDev = app.Environment.IsDevelopment();
 
-// Serve frontend (wwwroot)
+// Optional static hosting support
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".js"] = "text/javascript";
 provider.Mappings[".mjs"] = "text/javascript";
@@ -101,9 +122,12 @@ using (var scope = app.Services.CreateScope())
     await db.Database.EnsureCreatedAsync();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
-// JWKS endpoint for other services to verify JWT signature
+// JWKS endpoint
 app.MapGet("/.well-known/jwks.json", () =>
 {
     var rsa = rsaPublic.ExportParameters(false);
@@ -151,8 +175,8 @@ app.MapPost("/login", async (AppDbContext db, HttpResponse response, LoginReques
     if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
         return Results.Json(new { error = "Invalid credentials." }, statusCode: StatusCodes.Status401Unauthorized);
 
-    // Issue JWT (RS256)
     var creds = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
+
     var claims = new List<Claim>
     {
         new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -171,11 +195,9 @@ app.MapPost("/login", async (AppDbContext db, HttpResponse response, LoginReques
 
     string accessToken = new JwtSecurityTokenHandler().WriteToken(jwt);
 
-    // Log issuance (good for assignment evaluation)
     var expUnix = new DateTimeOffset(exp).ToUnixTimeSeconds();
     Console.WriteLine($"[TOKEN ISSUED] email={user.Email}, sub={user.Id}, kid={kid}, exp(utc)={exp:o}, exp(unix)={expUnix}");
 
-    // Refresh token stored in DB hashed
     string refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
     string refreshHash = HashToken(refreshToken);
 
@@ -187,7 +209,6 @@ app.MapPost("/login", async (AppDbContext db, HttpResponse response, LoginReques
     });
     await db.SaveChangesAsync();
 
-    // CSRF token
     string csrfToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     SetRefreshCookie(response, refreshToken, refreshDays, isDev);
     SetCsrfCookie(response, csrfToken, refreshDays, isDev);
@@ -278,10 +299,7 @@ app.MapGet("/me", (ClaimsPrincipal user) =>
     return Results.Ok(new { sub, email, role });
 }).RequireAuthorization();
 
-
-// ======= DEBUG endpoints for assignment demo (remove later) =======
-
-// Decode token payload to show exp/claims for evaluation (no signature verification here)
+// Debug decode
 app.MapPost("/debug/decode", (DecodeRequest req) =>
 {
     try
@@ -303,12 +321,10 @@ app.MapPost("/debug/decode", (DecodeRequest req) =>
 
 app.Run();
 
-
-// ===== Helpers =====
 static string HashToken(string token)
 {
     using var sha = SHA256.Create();
-    var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(token));
+    var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(token));
     return Convert.ToHexString(bytes).ToLowerInvariant();
 }
 
@@ -343,7 +359,6 @@ static bool ValidateCsrf(HttpRequest request)
     return string.Equals(cookieCsrf, headerCsrf.ToString(), StringComparison.Ordinal);
 }
 
-// ===== Requests =====
 record RegisterRequest(string Email, string Password, string? Role);
 record LoginRequest(string Email, string Password);
 record DecodeRequest(string AccessToken);

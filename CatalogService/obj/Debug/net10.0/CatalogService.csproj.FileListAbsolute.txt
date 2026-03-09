@@ -41,3 +41,4 @@ C:\Users\ADMIN\Desktop\elib-auth\CatalogService\obj\Debug\net10.0\refint\Catalog
 C:\Users\ADMIN\Desktop\elib-auth\CatalogService\obj\Debug\net10.0\CatalogService.pdb
 C:\Users\ADMIN\Desktop\elib-auth\CatalogService\obj\Debug\net10.0\CatalogService.genruntimeconfig.cache
 C:\Users\ADMIN\Desktop\elib-auth\CatalogService\obj\Debug\net10.0\ref\CatalogService.dll
+C:\Users\ADMIN\desktop\elib-auth\CatalogService\obj\Debug\net10.0\CatalogService.sourcelink.json

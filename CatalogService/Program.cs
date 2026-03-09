@@ -14,30 +14,36 @@ JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- DB ----
-string dbHost = builder.Configuration["Database:Host"]!;
-string dbPort = builder.Configuration["Database:Port"] ?? "3306";
-string dbName = builder.Configuration["Database:Name"]!;
-string dbUser = builder.Configuration["Database:User"]!;
-string dbPass = builder.Configuration["Database:Password"]!;
-
-string connStr = $"Server={dbHost};Port={dbPort};Database={dbName};User={dbUser};Password={dbPass};SslMode=Preferred;";
+// -----------------------------
+// DB
+// -----------------------------
+string connStr = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("Missing ConnectionStrings:Default");
 
 builder.Services.AddDbContext<CatalogDbContext>(opt =>
     opt.UseMySql(connStr, ServerVersion.AutoDetect(connStr)));
 
-// ---- JWT (enterprise: JwtBearer + JWKS) ----
-string issuer = builder.Configuration["Jwt:Issuer"] ?? "elib-auth";
-string audience = builder.Configuration["Jwt:Audience"] ?? "elib-web";
-string jwksUrl = builder.Configuration["Jwt:JwksUrl"] ?? throw new Exception("Jwt:JwksUrl missing");
+// -----------------------------
+// JWT / JWKS
+// -----------------------------
+string issuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Missing Jwt:Issuer");
 
-// This uses OpenIdConnectConfigurationRetriever, but we only supply JWKS URI
-// so we manually set SigningKeys via ConfigurationManager and a custom retriever.
-var httpDocRetriever = new HttpDocumentRetriever { RequireHttps = false }; // local dev uses http
+string audience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("Missing Jwt:Audience");
+
+string jwksUrl = builder.Configuration["Jwt:JwksUrl"]
+    ?? throw new InvalidOperationException("Missing Jwt:JwksUrl");
+
+var httpDocRetriever = new HttpDocumentRetriever
+{
+    RequireHttps = false
+};
+
 var jwksManager = new ConfigurationManager<OpenIdConnectConfiguration>(
-    metadataAddress: jwksUrl, // yes, we point to jwks.json directly
-    configRetriever: new JwksOnlyRetriever(),
-    docRetriever: httpDocRetriever)
+    jwksUrl,
+    new JwksOnlyRetriever(),
+    httpDocRetriever)
 {
     AutomaticRefreshInterval = TimeSpan.FromMinutes(10),
     RefreshInterval = TimeSpan.FromMinutes(1)
@@ -55,22 +61,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             ValidateIssuer = true,
             ValidIssuer = issuer,
-
             ValidateAudience = true,
             ValidAudience = audience,
-
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero,
-
-            ValidateIssuerSigningKey = true,
-            // do NOT set IssuerSigningKey(s) here; we resolve from JWKS below
+            ValidateIssuerSigningKey = true
         };
 
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = ctx =>
             {
-                // Always extract the JWT cleanly (prevents "Bearer" decode issue)
                 var auth = ctx.Request.Headers.Authorization.ToString();
                 if (!string.IsNullOrWhiteSpace(auth))
                 {
@@ -82,7 +83,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
             OnTokenValidated = ctx =>
             {
-                // Optional logging
                 var sub = ctx.Principal?.FindFirstValue("sub");
                 var role = ctx.Principal?.FindFirstValue("role");
                 Console.WriteLine($"[CATALOG TOKEN OK] sub={sub}, role={role}");
@@ -96,13 +96,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
 
-        // The enterprise part: dynamically resolve signing keys from JWKS manager
         options.TokenValidationParameters.IssuerSigningKeyResolver =
             (token, securityToken, kid, validationParameters) =>
             {
                 var cfg = jwksManager.GetConfigurationAsync(default).GetAwaiter().GetResult();
 
-                // If we have a kid, prefer matching key; otherwise try all keys (rotation-safe)
                 if (!string.IsNullOrWhiteSpace(kid))
                     return cfg.SigningKeys.Where(k => k.KeyId == kid).ToList();
 
@@ -127,7 +125,6 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ---- DB init / seed ----
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
@@ -144,7 +141,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// ---- Debug ----
 app.MapGet("/catalog/debug/whoami", (ClaimsPrincipal user) =>
 {
     return Results.Ok(new
@@ -156,10 +152,8 @@ app.MapGet("/catalog/debug/whoami", (ClaimsPrincipal user) =>
     });
 }).RequireAuthorization();
 
-// ---- Health ----
 app.MapGet("/catalog/health", () => Results.Ok(new { ok = true }));
 
-// ---- Public: list books ----
 app.MapGet("/catalog/books", async (CatalogDbContext db, string? query, string? category) =>
 {
     var q = db.Books.AsQueryable();
@@ -184,7 +178,6 @@ app.MapGet("/catalog/books", async (CatalogDbContext db, string? query, string? 
     return Results.Ok(books);
 });
 
-// ---- Public: details ----
 app.MapGet("/catalog/books/{id:int}", async (CatalogDbContext db, int id) =>
 {
     var book = await db.Books.FindAsync(id);
@@ -192,7 +185,6 @@ app.MapGet("/catalog/books/{id:int}", async (CatalogDbContext db, int id) =>
     return Results.Ok(book);
 });
 
-// ---- Admin: create ----
 app.MapPost("/catalog/books", async (CatalogDbContext db, BookCreate req) =>
 {
     var book = new Book
@@ -210,7 +202,6 @@ app.MapPost("/catalog/books", async (CatalogDbContext db, BookCreate req) =>
     return Results.Created($"/catalog/books/{book.Id}", book);
 }).RequireAuthorization("AdminOnly");
 
-// ---- Admin: update ----
 app.MapPut("/catalog/books/{id:int}", async (CatalogDbContext db, int id, BookCreate req) =>
 {
     var book = await db.Books.FindAsync(id);
@@ -227,7 +218,6 @@ app.MapPut("/catalog/books/{id:int}", async (CatalogDbContext db, int id, BookCr
     return Results.Ok(book);
 }).RequireAuthorization("AdminOnly");
 
-// ---- Admin: delete ----
 app.MapDelete("/catalog/books/{id:int}", async (CatalogDbContext db, int id) =>
 {
     var book = await db.Books.FindAsync(id);
@@ -242,12 +232,10 @@ app.Run();
 
 record BookCreate(string Title, string Author, string Category, int Year, string? Description, string? Isbn);
 
-// ===== JWKS retriever that reads jwks.json directly =====
 sealed class JwksOnlyRetriever : IConfigurationRetriever<OpenIdConnectConfiguration>
 {
     public async Task<OpenIdConnectConfiguration> GetConfigurationAsync(string address, IDocumentRetriever retriever, CancellationToken cancel)
     {
-        // address is jwks.json
         var json = await retriever.GetDocumentAsync(address, cancel);
 
         var jwks = new JsonWebKeySet(json);

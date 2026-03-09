@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
-using System.Net.Security;
 using System.Security.Claims;
 
 using BorrowService.Data;
@@ -8,35 +7,35 @@ using BorrowService.Models;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.VisualBasic;
 
 JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- DB ----
-string dbHost = builder.Configuration["Database:Host"]!;
-string dbPort = builder.Configuration["Database:Port"] ?? "3306";
-string dbName = builder.Configuration["Database:Name"]!;
-string dbUser = builder.Configuration["Database:User"]!;
-string dbPass = builder.Configuration["Database:Password"]!;
-
-string connStr = $"Server={dbHost};Port={dbPort};Database={dbName};User={dbUser};Password={dbPass};SslMode=Preferred;";
+// -----------------------------
+// DB
+// -----------------------------
+string connStr = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("Missing ConnectionStrings:Default");
 
 builder.Services.AddDbContext<BorrowDbContext>(opt =>
     opt.UseMySql(connStr, ServerVersion.AutoDetect(connStr)));
 
-// ---- JWT / JWKS ----
-string issuer = builder.Configuration["Jwt:Issuer"] ?? "elib-auth";
-string audience = builder.Configuration["Jwt:Audience"] ?? "elib-web";
-string jwksUrl = builder.Configuration["Jwt:JwksUrl"] ?? throw new Exception("Jwt:JwksUrl missing");
+// -----------------------------
+// JWT / JWKS
+// -----------------------------
+string issuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Missing Jwt:Issuer");
+
+string audience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("Missing Jwt:Audience");
+
+string jwksUrl = builder.Configuration["Jwt:JwksUrl"]
+    ?? throw new InvalidOperationException("Missing Jwt:JwksUrl");
+
+Console.WriteLine($"[BORROW] JWKS URL: {jwksUrl}");
 
 var jwksCache = new JwksCache(jwksUrl);
-
-// preload keys once
-Console.WriteLine($"[BORROW] JWKS URL: {jwksUrl}");
-var preload = await jwksCache.GetSigningKeys(null);
-Console.WriteLine("[BORROW] Loaded JWKS kids: " + string.Join(", ", preload.Select(k => k.KeyId)));
 
 builder.Services.AddSingleton(jwksCache);
 builder.Services.AddSingleton(new JwtValidator(issuer, audience, jwksCache));
@@ -48,7 +47,7 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-// ---- Custom JWT middleware (sets HttpContext.User) ----
+// Custom lightweight JWT middleware
 app.Use(async (ctx, next) =>
 {
     var auth = ctx.Request.Headers.Authorization.ToString();
@@ -56,7 +55,6 @@ app.Use(async (ctx, next) =>
     if (!string.IsNullOrWhiteSpace(auth) &&
         auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
     {
-        // Supports accidental "Bearer Bearer <jwt>" by taking the last part
         var parts = auth.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var jwt = parts.Length >= 2 ? parts[^1] : "";
 
@@ -67,7 +65,6 @@ app.Use(async (ctx, next) =>
 
             if (principal != null)
             {
-                // Force an authenticated identity (important)
                 var identity = new ClaimsIdentity(principal.Claims, "CustomJwt");
                 ctx.User = new ClaimsPrincipal(identity);
             }
@@ -77,14 +74,12 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-// ---- DB ensure ----
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BorrowDbContext>();
     await db.Database.EnsureCreatedAsync();
 }
 
-// ---- Helpers ----
 static int? TryGetUserId(ClaimsPrincipal user)
 {
     var sub = user.FindFirstValue("sub");
@@ -94,7 +89,6 @@ static int? TryGetUserId(ClaimsPrincipal user)
 static bool IsAdmin(ClaimsPrincipal user) =>
     string.Equals(user?.FindFirstValue("role"), "ADMIN", StringComparison.OrdinalIgnoreCase);
 
-// ---- Endpoints ----
 app.MapGet("/borrow/health", () => Results.Ok(new { ok = true }));
 
 app.MapGet("/borrow/debug/whoami", (ClaimsPrincipal user) =>
@@ -108,7 +102,6 @@ app.MapGet("/borrow/debug/whoami", (ClaimsPrincipal user) =>
     });
 });
 
-// Checkout (auth required)
 app.MapPost("/borrow/checkout/{bookId:int}", async (BorrowDbContext db, ClaimsPrincipal user, int bookId) =>
 {
     if (user?.Identity?.IsAuthenticated != true) return Results.Unauthorized();
@@ -150,7 +143,6 @@ app.MapPost("/borrow/checkout/{bookId:int}", async (BorrowDbContext db, ClaimsPr
     });
 });
 
-// Return (auth required)
 app.MapPost("/borrow/return/{bookId:int}", async (BorrowDbContext db, ClaimsPrincipal user, int bookId) =>
 {
     if (user?.Identity?.IsAuthenticated != true) return Results.Unauthorized();
@@ -170,7 +162,6 @@ app.MapPost("/borrow/return/{bookId:int}", async (BorrowDbContext db, ClaimsPrin
     return Results.Ok(new { message = "Returned", loan });
 });
 
-// My loans (auth required)
 app.MapGet("/borrow/my", async (BorrowDbContext db, ClaimsPrincipal user) =>
 {
     if (user?.Identity?.IsAuthenticated != true) return Results.Unauthorized();
@@ -193,8 +184,6 @@ app.MapGet("/borrow/my", async (BorrowDbContext db, ClaimsPrincipal user) =>
     return Results.Ok(loans);
 });
 
-// Admin all loans (explicit RBAC -> 401/403 correct)
-// Admin all loans (explicit RBAC -> 401/403 correct)
 app.MapGet("/borrow/admin/all", async (BorrowDbContext db, ClaimsPrincipal user) =>
 {
     if (user?.Identity?.IsAuthenticated != true)
@@ -241,7 +230,7 @@ app.MapGet("/borrow/my/active", async (BorrowDbContext db, ClaimsPrincipal user)
     return Results.Ok(active);
 });
 
-    app.MapGet("/borrow/admin/summary", async (BorrowDbContext db, ClaimsPrincipal user) =>
+app.MapGet("/borrow/admin/summary", async (BorrowDbContext db, ClaimsPrincipal user) =>
 {
     if (user?.Identity?.IsAuthenticated != true)
         return Results.Unauthorized();
@@ -267,7 +256,6 @@ app.MapGet("/borrow/my/active", async (BorrowDbContext db, ClaimsPrincipal user)
 
 app.Run();
 
-// ===== Validator =====
 sealed class JwtValidator
 {
     private readonly string _issuer;
@@ -315,7 +303,6 @@ sealed class JwtValidator
     }
 }
 
-// ===== JWKS Cache =====
 sealed class JwksCache
 {
     private readonly string _jwksUrl;
@@ -342,7 +329,6 @@ sealed class JwksCache
 
     private async Task EnsureFreshAsync()
     {
-        // cache long to avoid slow JWKS calls every few minutes (good for dev)
         if (DateTime.UtcNow < _nextRefreshUtc && _keysByKid.Count > 0) return;
 
         var jwks = await _http.GetFromJsonAsync<JwksDoc>(_jwksUrl)
@@ -370,7 +356,7 @@ sealed class JwksCache
         lock (_lock)
         {
             _keysByKid = dict;
-            _nextRefreshUtc = DateTime.UtcNow.AddHours(6); // 🔥 makes things faster
+            _nextRefreshUtc = DateTime.UtcNow.AddHours(6);
         }
     }
 
