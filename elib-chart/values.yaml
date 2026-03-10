@@ -1,0 +1,138 @@
+nameOverride: ""
+fullnameOverride: ""
+namespaceOverride: elib
+
+global:
+  imagePullPolicy: IfNotPresent
+
+ingress:
+  enabled: false
+  className: alb
+  host: ""
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+
+auth:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-auth
+    pullPolicy: Always
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+  env:
+    ASPNETCORE_ENVIRONMENT: Production
+    Database__Port: "3306"
+    Database__Name: authdb
+    Jwt__Issuer: elib-auth
+    Jwt__Audience: elib-web
+    Jwt__AccessTokenMinutes: "15"
+    Jwt__RefreshTokenDays: "14"
+    Keys__PrivateKeyPath: /keys/jwt_private.pem
+    Keys__PublicKeyPath: /keys/jwt_public.pem
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+catalog:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-catalog
+    pullPolicy: Always
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+  env:
+    ASPNETCORE_ENVIRONMENT: Production
+    Database__Port: "3306"
+    Database__Name: catalogdb
+    Jwt__Issuer: elib-auth
+    Jwt__Audience: elib-web
+    Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8080/.well-known/jwks.json"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+borrow:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-borrow
+    pullPolicy: Always
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+  env:
+    ASPNETCORE_ENVIRONMENT: Production
+    Database__Port: "3306"
+    Database__Name: borrowdb
+    Jwt__Issuer: elib-auth
+    Jwt__Audience: elib-web
+    Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8080/.well-known/jwks.json"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+web:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-web
+    pullPolicy: Always
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  serviceAccount:
+    create: false
+    automount: false
+    annotations: {}
+    name: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+secretStore:
+  name: elib-app-secrets
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,15 @@
+{{- if .Values.auth.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+  namespace: {{ include "elib-chart.namespace" . }}
+spec:
+  type: {{ .Values.auth.service.type }}
+  selector:
+    {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "auth") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.auth.service.port }}
+      targetPort: http
+{{- end }}

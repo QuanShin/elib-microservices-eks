@@ -1,0 +1,81 @@
+{{- if .Values.auth.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+  namespace: {{ include "elib-chart.namespace" . }}
+  labels:
+    {{- include "elib-chart.componentLabels" (dict "root" . "name" "auth") | nindent 4 }}
+spec:
+  replicas: {{ .Values.auth.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "auth") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "auth") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "auth" "serviceAccount" .Values.auth.serviceAccount) }}
+      containers:
+        - name: auth
+          image: "{{ .Values.auth.image.repository }}:{{ .Values.auth.image.tag }}"
+          imagePullPolicy: {{ .Values.auth.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ .Values.auth.env.ASPNETCORE_ENVIRONMENT | quote }}
+            - name: Database__Host
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-host
+            - name: Database__Port
+              value: {{ .Values.auth.env.Database__Port | quote }}
+            - name: Database__Name
+              value: {{ .Values.auth.env.Database__Name | quote }}
+            - name: Database__User
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-user
+            - name: Database__Password
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-password
+            - name: Jwt__Issuer
+              value: {{ .Values.auth.env.Jwt__Issuer | quote }}
+            - name: Jwt__Audience
+              value: {{ .Values.auth.env.Jwt__Audience | quote }}
+            - name: Jwt__AccessTokenMinutes
+              value: {{ .Values.auth.env.Jwt__AccessTokenMinutes | quote }}
+            - name: Jwt__RefreshTokenDays
+              value: {{ .Values.auth.env.Jwt__RefreshTokenDays | quote }}
+            - name: Jwt__Kid
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: jwt-kid
+            - name: Keys__PrivateKeyPath
+              value: {{ .Values.auth.env.Keys__PrivateKeyPath | quote }}
+            - name: Keys__PublicKeyPath
+              value: {{ .Values.auth.env.Keys__PublicKeyPath | quote }}
+          volumeMounts:
+            - name: jwt-files
+              mountPath: /keys
+              readOnly: true
+          resources:
+            {{- toYaml .Values.auth.resources | nindent 12 }}
+      volumes:
+        - name: jwt-files
+          secret:
+            secretName: {{ .Values.secretStore.name }}
+            items:
+              - key: jwt_private.pem
+                path: jwt_private.pem
+              - key: jwt_public.pem
+                path: jwt_public.pem
+{{- end }}

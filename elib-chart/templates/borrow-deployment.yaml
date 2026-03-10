@@ -1,0 +1,62 @@
+{{- if .Values.borrow.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "borrow") }}
+  namespace: {{ include "elib-chart.namespace" . }}
+  labels:
+    {{- include "elib-chart.componentLabels" (dict "root" . "name" "borrow") | nindent 4 }}
+spec:
+  replicas: {{ .Values.borrow.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "borrow") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "borrow") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "borrow" "serviceAccount" .Values.borrow.serviceAccount) }}
+      containers:
+        - name: borrow
+          image: "{{ .Values.borrow.image.repository }}:{{ .Values.borrow.image.tag }}"
+          imagePullPolicy: {{ .Values.borrow.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: borrow-connection-string
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ .Values.borrow.env.ASPNETCORE_ENVIRONMENT | quote }}
+            - name: Database__Host
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-host
+            - name: Database__Port
+              value: {{ .Values.borrow.env.Database__Port | quote }}
+            - name: Database__Name
+              value: {{ .Values.borrow.env.Database__Name | quote }}
+            - name: Database__User
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-user
+            - name: Database__Password
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-password
+            - name: Jwt__Issuer
+              value: {{ .Values.borrow.env.Jwt__Issuer | quote }}
+            - name: Jwt__Audience
+              value: {{ .Values.borrow.env.Jwt__Audience | quote }}
+            - name: Jwt__JwksUrl
+              value: {{ .Values.borrow.env.Jwt__JwksUrl | quote }}
+          resources:
+            {{- toYaml .Values.borrow.resources | nindent 12 }}
+{{- end }}

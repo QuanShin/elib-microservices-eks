@@ -1,0 +1,15 @@
+{{- if .Values.borrow.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "borrow") }}
+  namespace: {{ include "elib-chart.namespace" . }}
+spec:
+  type: {{ .Values.borrow.service.type }}
+  selector:
+    {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "borrow") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.borrow.service.port }}
+      targetPort: http
+{{- end }}

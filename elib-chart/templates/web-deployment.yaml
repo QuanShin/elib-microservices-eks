@@ -1,0 +1,28 @@
+{{- if .Values.web.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "web") }}
+  namespace: {{ include "elib-chart.namespace" . }}
+  labels:
+    {{- include "elib-chart.componentLabels" (dict "root" . "name" "web") | nindent 4 }}
+spec:
+  replicas: {{ .Values.web.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "web") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "web") | nindent 8 }}
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+{{- end }}

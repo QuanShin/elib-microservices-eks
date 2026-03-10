@@ -1,0 +1,57 @@
+{{- if .Values.catalog.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "catalog") }}
+  namespace: {{ include "elib-chart.namespace" . }}
+  labels:
+    {{- include "elib-chart.componentLabels" (dict "root" . "name" "catalog") | nindent 4 }}
+spec:
+  replicas: {{ .Values.catalog.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "catalog") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "catalog") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "catalog" "serviceAccount" .Values.catalog.serviceAccount) }}
+      containers:
+        - name: catalog
+          image: "{{ .Values.catalog.image.repository }}:{{ .Values.catalog.image.tag }}"
+          imagePullPolicy: {{ .Values.catalog.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ .Values.catalog.env.ASPNETCORE_ENVIRONMENT | quote }}
+            - name: Database__Host
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-host
+            - name: Database__Port
+              value: {{ .Values.catalog.env.Database__Port | quote }}
+            - name: Database__Name
+              value: {{ .Values.catalog.env.Database__Name | quote }}
+            - name: Database__User
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-user
+            - name: Database__Password
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: db-password
+            - name: Jwt__Issuer
+              value: {{ .Values.catalog.env.Jwt__Issuer | quote }}
+            - name: Jwt__Audience
+              value: {{ .Values.catalog.env.Jwt__Audience | quote }}
+            - name: Jwt__JwksUrl
+              value: {{ .Values.catalog.env.Jwt__JwksUrl | quote }}
+          resources:
+            {{- toYaml .Values.catalog.resources | nindent 12 }}
+{{- end }}

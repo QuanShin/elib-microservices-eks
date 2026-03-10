@@ -1,0 +1,15 @@
+{{- if .Values.catalog.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "catalog") }}
+  namespace: {{ include "elib-chart.namespace" . }}
+spec:
+  type: {{ .Values.catalog.service.type }}
+  selector:
+    {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "catalog") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.catalog.service.port }}
+      targetPort: http
+{{- end }}
