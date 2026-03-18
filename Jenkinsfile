@@ -1,6 +1,10 @@
 pipeline {
   agent any
 
+  options {
+    disableConcurrentBuilds()
+  }
+  
   environment {
     AWS_REGION   = 'us-east-1'
     AWS_ACCOUNT  = '884537046542'
@@ -84,7 +88,10 @@ pipeline {
               --set auth.image.tag=$IMAGE_TAG \
               --set catalog.image.tag=$IMAGE_TAG \
               --set borrow.image.tag=$IMAGE_TAG \
-              --set web.image.tag=$IMAGE_TAG
+              --set web.image.tag=$IMAGE_TAG \
+              --wait \
+              --timeout 10m \
+              --atomic
           else
             helm install elib ./elib-chart \
               -n elib \
@@ -93,7 +100,10 @@ pipeline {
               --set auth.image.tag=$IMAGE_TAG \
               --set catalog.image.tag=$IMAGE_TAG \
               --set borrow.image.tag=$IMAGE_TAG \
-              --set web.image.tag=$IMAGE_TAG
+              --set web.image.tag=$IMAGE_TAG \
+              --wait \
+              --timeout 10m \
+              --atomic
           fi
 
           rm -f .tmp/values-secret.yaml
