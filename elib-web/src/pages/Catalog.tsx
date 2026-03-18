@@ -24,6 +24,58 @@ function coverStyle(seed: string) {
   };
 }
 
+function BookCover({ title, category }: { title: string; category: string }) {
+  return (
+    <div
+      className="bookThumb"
+      style={coverStyle(`${title}-${category}`)}
+      aria-label={`${title} cover`}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: 10,
+          color: "white"
+        }}
+      >
+        <div
+          style={{
+            alignSelf: "flex-start",
+            padding: "4px 8px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,.16)",
+            border: "1px solid rgba(255,255,255,.18)",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: ".04em",
+            textTransform: "uppercase",
+            backdropFilter: "blur(4px)"
+          }}
+        >
+          {category}
+        </div>
+
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 900,
+            lineHeight: 1.05,
+            letterSpacing: "-.02em",
+            textShadow: "0 6px 18px rgba(0,0,0,.22)",
+            wordBreak: "break-word"
+          }}
+        >
+          {title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Catalog({ onSelect }: Props) {
   const [books, setBooks] = useState<BookListItem[]>([]);
   const [busy, setBusy] = useState(false);
@@ -57,19 +109,37 @@ export default function Catalog({ onSelect }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return books.filter((b) => {
-      const matchQ = !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q);
+      const matchQ =
+        !q ||
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q);
+
       const matchC = category === "ALL" || b.category === category;
       return matchQ && matchC;
     });
   }, [books, query, category]);
 
   return (
-    <div className="panel">
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-        <div style={{ fontWeight: 900, fontSize: 18 }}>Catalog</div>
+    <div className="surfaceCard">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+          flexWrap: "wrap"
+        }}
+      >
+        <div>
+          <div className="sectionTitle">Discover Books</div>
+          <div className="sectionSubtitle">
+            Browse the library collection, filter by category, and open any title for full details.
+          </div>
+        </div>
+
         <button
           className="btn secondary"
-          style={{ marginTop: 0, width: "auto", padding: "10px 12px" }}
+          style={{ marginTop: 0, width: "auto", padding: "10px 14px" }}
           onClick={load}
           disabled={busy}
           type="button"
@@ -78,33 +148,78 @@ export default function Catalog({ onSelect }: Props) {
         </button>
       </div>
 
-      <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-        <input
-          placeholder="Search by title or author…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+      <div className="grid2" style={{ marginTop: 16 }}>
+        <div>
+          <label>Search</label>
+          <input
+            placeholder="Search by title or author…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
 
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label>Category</label>
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          marginTop: 14,
+          flexWrap: "wrap"
+        }}
+      >
+        <div className="muted small">
+          {busy ? "Loading library…" : `${filtered.length} result${filtered.length === 1 ? "" : "s"} found`}
+        </div>
+
+        {(query || category !== "ALL") && (
+          <button
+            className="btn secondary"
+            style={{ marginTop: 0, width: "auto", padding: "8px 12px" }}
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setCategory("ALL");
+            }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {err && <div className="msg error">{err}</div>}
 
-      <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+      <div className="catalogGrid" style={{ marginTop: 16 }}>
         {filtered.map((b) => (
-          <button key={b.id} className="bookCard" onClick={() => onSelect(b.id)} type="button">
+          <button
+            key={b.id}
+            className="bookCard"
+            onClick={() => onSelect(b.id)}
+            type="button"
+          >
             <div className="bookCardRow">
-              <div className="bookThumb" style={coverStyle(`${b.title}-${b.category}`)} />
-              <div>
+              <BookCover title={b.title} category={b.category} />
+
+              <div style={{ minWidth: 0 }}>
                 <div className="bookTitle">{b.title}</div>
                 <div className="muted small">{b.author}</div>
-                <div className="muted small">{b.category} • {b.year}</div>
+
+                <div className="bookDetailsMeta" style={{ marginTop: 10 }}>
+                  <span className="metaTag">{b.category}</span>
+                  <span className="metaTag">{b.year}</span>
+                </div>
               </div>
             </div>
           </button>
@@ -112,7 +227,21 @@ export default function Catalog({ onSelect }: Props) {
       </div>
 
       {!busy && filtered.length === 0 && (
-        <div className="muted small" style={{ marginTop: 10 }}>No matches.</div>
+        <div
+          className="surfaceCard"
+          style={{
+            marginTop: 16,
+            textAlign: "center",
+            background: "rgba(255,255,255,.68)"
+          }}
+        >
+          <div className="sectionTitle" style={{ fontSize: "1rem" }}>
+            No matches found
+          </div>
+          <div className="sectionSubtitle">
+            Try a different title, author, or category filter.
+          </div>
+        </div>
       )}
     </div>
   );

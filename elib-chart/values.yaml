@@ -23,7 +23,8 @@ auth:
     tag: latest
   service:
     type: ClusterIP
-    port: 8080
+    port: 8081
+  containerPort: 8081
   serviceAccount:
     create: true
     automount: true
@@ -31,6 +32,7 @@ auth:
     name: ""
   env:
     ASPNETCORE_ENVIRONMENT: Production
+    ASPNETCORE_URLS: http://+:8081
     Database__Port: "3306"
     Database__Name: authdb
     Jwt__Issuer: elib-auth
@@ -56,7 +58,8 @@ catalog:
     tag: latest
   service:
     type: ClusterIP
-    port: 8080
+    port: 8082
+  containerPort: 8082
   serviceAccount:
     create: true
     automount: true
@@ -64,11 +67,12 @@ catalog:
     name: ""
   env:
     ASPNETCORE_ENVIRONMENT: Production
+    ASPNETCORE_URLS: http://+:8082
     Database__Port: "3306"
     Database__Name: catalogdb
     Jwt__Issuer: elib-auth
     Jwt__Audience: elib-web
-    Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8080/.well-known/jwks.json"
+    Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8081/.well-known/jwks.json"
   resources:
     requests:
       cpu: 100m
@@ -86,7 +90,8 @@ borrow:
     tag: latest
   service:
     type: ClusterIP
-    port: 8080
+    port: 8083
+  containerPort: 8083
   serviceAccount:
     create: true
     automount: true
@@ -94,11 +99,12 @@ borrow:
     name: ""
   env:
     ASPNETCORE_ENVIRONMENT: Production
+    ASPNETCORE_URLS: http://+:8083
     Database__Port: "3306"
     Database__Name: borrowdb
     Jwt__Issuer: elib-auth
     Jwt__Audience: elib-web
-    Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8080/.well-known/jwks.json"
+    Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8081/.well-known/jwks.json"
   resources:
     requests:
       cpu: 100m
@@ -117,6 +123,7 @@ web:
   service:
     type: ClusterIP
     port: 8080
+  containerPort: 8080
   serviceAccount:
     create: false
     automount: false

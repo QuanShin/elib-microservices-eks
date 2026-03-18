@@ -36,6 +36,58 @@ function coverStyle(seed: string) {
   };
 }
 
+function BookCover({ title, category, seed }: { title: string; category: string; seed: string }) {
+  return (
+    <div
+      className="bookThumb"
+      style={coverStyle(seed)}
+      aria-label={`${title} cover`}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: 10,
+          color: "white"
+        }}
+      >
+        <div
+          style={{
+            alignSelf: "flex-start",
+            padding: "4px 8px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,.16)",
+            border: "1px solid rgba(255,255,255,.18)",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: ".04em",
+            textTransform: "uppercase",
+            backdropFilter: "blur(4px)"
+          }}
+        >
+          {category}
+        </div>
+
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 900,
+            lineHeight: 1.05,
+            letterSpacing: "-.02em",
+            textShadow: "0 6px 18px rgba(0,0,0,.22)",
+            wordBreak: "break-word"
+          }}
+        >
+          {title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MyLoans({
   onBack,
   onOpenBook
@@ -77,7 +129,7 @@ export default function MyLoans({
             const b = await getBook(bid);
             return [bid, b] as const;
           } catch {
-            setMetaErr((prev) => prev ?? `Cannot load some book metadata from CatalogService.`);
+            setMetaErr((prev) => prev ?? "Cannot load some book metadata from CatalogService.");
             return [bid, null] as const;
           }
         })
@@ -133,7 +185,9 @@ export default function MyLoans({
     const book = bookMap[l.bookId] ?? null;
 
     const title = book ? book.title : `Book ID: ${l.bookId}`;
-    const meta = book ? `${book.author} • ${book.category} • ${book.year}` : "Book details unavailable";
+    const author = book?.author ?? "Unknown author";
+    const category = book?.category ?? "Unavailable";
+    const year = book?.year ?? "—";
 
     const dueDays = !isHistory ? daysLeft(l.dueAtUtc) : null;
     const dueText =
@@ -144,45 +198,58 @@ export default function MyLoans({
         : "";
 
     return (
-      <div
-        key={l.id}
-        style={{
-          marginTop: 10,
-          padding: 12,
-          borderRadius: 16,
-          border: "1px solid var(--line)",
-          background: "#fff"
-        }}
-      >
+      <div key={l.id} className="loanCard">
         <div className="bookCardRow">
-          <div className="bookThumb" style={coverStyle(`${title}-${l.bookId}`)} />
-          <div>
-            <div style={{ fontWeight: 900 }}>{title}</div>
-            <div className="muted small">{meta}</div>
+          <BookCover
+            title={title}
+            category={category}
+            seed={`${title}-${l.bookId}`}
+          />
 
-            <div className="muted small" style={{ marginTop: 6 }}>
-              Borrowed: {fmt(l.borrowedAtUtc)}
+          <div className="bookDetailsBody">
+            <div className="bookDetailsHeader">
+              <div className="bookTitle">{title}</div>
+
+              <div className="bookDetailsMeta">
+                <span className="metaTag">{author}</span>
+                <span className="metaTag">{category}</span>
+                <span className="metaTag">{year}</span>
+                <span className="metaTag">{isHistory ? "Returned" : "Active loan"}</span>
+              </div>
             </div>
 
-            {!isHistory && (
-              <div className="muted small">
-                Due: {fmt(l.dueAtUtc)} ({dueText})
-              </div>
-            )}
+            <div className="loanStateCard">
+              <div className="loanStateText">Borrowed: {fmt(l.borrowedAtUtc)}</div>
 
-            {isHistory && (
-              <div className="muted small">
-                Returned: {fmt(l.returnedAtUtc)}
-              </div>
-            )}
+              {!isHistory && (
+                <>
+                  <div className="loanStateText">Due: {fmt(l.dueAtUtc)}</div>
+                  <div className="loanStateText">{dueText}</div>
+                </>
+              )}
 
-            <div className="grid2" style={{ marginTop: 10 }}>
-              <button className="btn secondary" onClick={() => onOpenBook(l.bookId)} disabled={busy} type="button">
+              {isHistory && (
+                <div className="loanStateText">Returned: {fmt(l.returnedAtUtc)}</div>
+              )}
+            </div>
+
+            <div className="bookActionRow">
+              <button
+                className="btn secondary"
+                onClick={() => onOpenBook(l.bookId)}
+                disabled={busy}
+                type="button"
+              >
                 View book
               </button>
 
               {!isHistory && (
-                <button className="btn primary" onClick={() => onReturn(l.bookId)} disabled={busy} type="button">
+                <button
+                  className="btn primary"
+                  onClick={() => onReturn(l.bookId)}
+                  disabled={busy}
+                  type="button"
+                >
                   Return
                 </button>
               )}
@@ -194,40 +261,45 @@ export default function MyLoans({
   }
 
   return (
-    <div className="panel">
+    <div className="bookDetailsShell">
       <div className="toolbar">
-        <button className="btn secondary" style={{ marginTop: 0 }} onClick={onBack} type="button">
+        <button className="btn secondary bookBackBar" onClick={onBack} type="button">
           ← Back
         </button>
-        <button className="btn secondary" style={{ marginTop: 0 }} onClick={load} disabled={busy} type="button">
+
+        <button
+          className="btn secondary"
+          style={{ marginTop: 0, width: "auto" }}
+          onClick={load}
+          disabled={busy}
+          type="button"
+        >
           Refresh
         </button>
       </div>
 
-      <div
-        style={{
-          marginTop: 12,
-          padding: 12,
-          borderRadius: 16,
-          border: "1px solid var(--line)",
-          background: "#fff"
-        }}
-      >
-        <div style={{ fontWeight: 900, marginBottom: 6 }}>Quick test</div>
-        <div className="muted small">
-          Borrow a book by ID for testing.
+      <div className="surfaceCard">
+        <div className="sectionTitle">My Loans</div>
+        <div className="sectionSubtitle">
+          Review active loans, inspect returned history, and test borrowing directly by book ID.
         </div>
 
-        <div className="grid2" style={{ marginTop: 10 }}>
-          <input
-            type="number"
-            value={testBookId}
-            onChange={(e) => setTestBookId(Number(e.target.value))}
-            placeholder="Book ID"
-          />
-          <button className="btn primary" onClick={onBorrowTest} disabled={busy} type="button">
-            Borrow book
-          </button>
+        <div className="grid2" style={{ marginTop: 16 }}>
+          <div>
+            <label>Quick test book ID</label>
+            <input
+              type="number"
+              value={testBookId}
+              onChange={(e) => setTestBookId(Number(e.target.value))}
+              placeholder="Book ID"
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "end" }}>
+            <button className="btn primary" onClick={onBorrowTest} disabled={busy} type="button">
+              Borrow book
+            </button>
+          </div>
         </div>
       </div>
 
@@ -236,16 +308,38 @@ export default function MyLoans({
       {metaErr && <div className="msg error">{metaErr}</div>}
       {ok && <div className="msg ok">{ok}</div>}
 
-      <div style={{ marginTop: 14 }}>
-        <div style={{ fontWeight: 900 }}>Active Loans</div>
-        {loans && active.length === 0 && <div className="muted small" style={{ marginTop: 8 }}>No active loans.</div>}
-        {active.map((l) => renderLoanCard(l, false))}
+      <div className="surfaceCard">
+        <div className="sectionTitle">Active Loans</div>
+        <div className="sectionSubtitle">
+          Books currently checked out and ready for return.
+        </div>
+
+        {loans && active.length === 0 ? (
+          <div className="muted small" style={{ marginTop: 12 }}>
+            No active loans.
+          </div>
+        ) : (
+          <div className="loansGrid" style={{ marginTop: 16 }}>
+            {active.map((l) => renderLoanCard(l, false))}
+          </div>
+        )}
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontWeight: 900 }}>History</div>
-        {loans && history.length === 0 && <div className="muted small" style={{ marginTop: 8 }}>No returned books yet.</div>}
-        {history.map((l) => renderLoanCard(l, true))}
+      <div className="surfaceCard">
+        <div className="sectionTitle">History</div>
+        <div className="sectionSubtitle">
+          Previously borrowed titles that have already been returned.
+        </div>
+
+        {loans && history.length === 0 ? (
+          <div className="muted small" style={{ marginTop: 12 }}>
+            No returned books yet.
+          </div>
+        ) : (
+          <div className="loansGrid" style={{ marginTop: 16 }}>
+            {history.map((l) => renderLoanCard(l, true))}
+          </div>
+        )}
       </div>
     </div>
   );

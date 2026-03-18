@@ -10,7 +10,9 @@ RUN dotnet publish "BorrowService.csproj" -c Release -o /app/publish /p:UseAppHo
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
+
+EXPOSE 8083
+ENV ASPNETCORE_URLS=http://+:8083
+
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "BorrowService.dll"]

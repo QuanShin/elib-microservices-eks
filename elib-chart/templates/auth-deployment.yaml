@@ -22,11 +22,18 @@ spec:
           image: "{{ .Values.auth.image.repository }}:{{ .Values.auth.image.tag }}"
           imagePullPolicy: {{ .Values.auth.image.pullPolicy }}
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.auth.containerPort }}
               name: http
           env:
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretStore.name }}
+                  key: auth-connection-string
             - name: ASPNETCORE_ENVIRONMENT
               value: {{ .Values.auth.env.ASPNETCORE_ENVIRONMENT | quote }}
+            - name: ASPNETCORE_URLS
+              value: {{ .Values.auth.env.ASPNETCORE_URLS | quote }}
             - name: Database__Host
               valueFrom:
                 secretKeyRef:

@@ -30,6 +30,58 @@ function coverStyle(seed: string) {
   };
 }
 
+function BookCover({ title, category }: { title: string; category: string }) {
+  return (
+    <div
+      className="bookDetailsCover"
+      style={coverStyle(`${title}-${category}`)}
+      aria-label={`${title} cover`}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: 16,
+          color: "white"
+        }}
+      >
+        <div
+          style={{
+            alignSelf: "flex-start",
+            padding: "6px 10px",
+            borderRadius: 999,
+            background: "rgba(255,255,255,.16)",
+            border: "1px solid rgba(255,255,255,.18)",
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: ".04em",
+            textTransform: "uppercase",
+            backdropFilter: "blur(4px)"
+          }}
+        >
+          {category}
+        </div>
+
+        <div
+          style={{
+            fontSize: 20,
+            fontWeight: 900,
+            lineHeight: 1.05,
+            letterSpacing: "-.02em",
+            textShadow: "0 6px 18px rgba(0,0,0,.24)",
+            wordBreak: "break-word"
+          }}
+        >
+          {title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BookDetails({
   id,
   role,
@@ -192,9 +244,9 @@ export default function BookDetails({
   }
 
   return (
-    <div className="panel">
+    <div className="bookDetailsShell">
       <div className="toolbar">
-        <button className="btn secondary" style={{ marginTop: 0 }} onClick={onBack} type="button">
+        <button className="btn secondary bookBackBar" onClick={onBack} type="button">
           ← Back
         </button>
 
@@ -215,62 +267,85 @@ export default function BookDetails({
       {ok && <div className="msg ok">{ok}</div>}
 
       {book && !edit && (
-        <div style={{ marginTop: 12, display: "grid", gap: 14 }}>
-          <div className="bookCardRow">
-            <div className="bookThumb" style={{ ...coverStyle(`${book.title}-${book.category}`), height: 180, width: 130 }} />
-            <div>
-              <div style={{ fontWeight: 1000, fontSize: 22 }}>{book.title}</div>
-              <div className="muted small">{book.author} • {book.category} • {book.year}</div>
-              {book.isbn && <div className="muted small">ISBN: {book.isbn}</div>}
-            </div>
+        <section className="bookDetailsCard">
+          <div className="bookDetailsCoverWrap">
+            <BookCover title={book.title} category={book.category} />
           </div>
 
-          {book.description && (
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 16,
-                border: "1px solid var(--line)",
-                background: "#fff"
-              }}
-            >
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>Description</div>
-              <div className="muted" style={{ marginTop: 0 }}>{book.description}</div>
-            </div>
-          )}
+          <div className="bookDetailsBody">
+            <div className="bookDetailsHeader">
+              <h1 className="bookDetailsTitle">{book.title}</h1>
 
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 16,
-              border: "1px solid var(--line)",
-              background: "#fff"
-            }}
-          >
-            {!activeLoanForThisBook ? (
-              <>
-                <div style={{ fontWeight: 900 }}>Available</div>
-                <div className="muted small">You do not have this book borrowed right now.</div>
-                <button className="btn primary" onClick={onBorrow} disabled={busy || loanBusy} type="button">
-                  Borrow this book
-                </button>
-              </>
+              <div className="bookDetailsMeta">
+                <span className="metaTag">{book.author}</span>
+                <span className="metaTag">{book.category}</span>
+                <span className="metaTag">{book.year}</span>
+                {book.isbn ? <span className="metaTag">ISBN {book.isbn}</span> : null}
+              </div>
+            </div>
+
+            {book.description ? (
+              <div className="bookDetailsDesc">{book.description}</div>
             ) : (
-              <>
-                <div style={{ fontWeight: 900 }}>Currently borrowed</div>
-                <div className="muted small">Borrowed: {fmt(activeLoanForThisBook.borrowedAtUtc)}</div>
-                <div className="muted small">Due: {fmt(activeLoanForThisBook.dueAtUtc)}</div>
-                <button className="btn secondary" onClick={onReturn} disabled={busy || loanBusy} type="button">
-                  Return this book
-                </button>
-              </>
+              <div className="bookDetailsDesc">No description was provided for this title yet.</div>
             )}
+
+            <div className="bookInfoGrid">
+              <div className="infoMiniCard">
+                <div className="infoMiniLabel">Author</div>
+                <div className="infoMiniValue">{book.author}</div>
+              </div>
+
+              <div className="infoMiniCard">
+                <div className="infoMiniLabel">Category</div>
+                <div className="infoMiniValue">{book.category}</div>
+              </div>
+
+              <div className="infoMiniCard">
+                <div className="infoMiniLabel">Published</div>
+                <div className="infoMiniValue">{book.year}</div>
+              </div>
+            </div>
+
+            <div className="loanStateCard">
+              {!activeLoanForThisBook ? (
+                <>
+                  <div className="loanStateTitle">Available now</div>
+                  <div className="loanStateText">This title is available for checkout right now.</div>
+                </>
+              ) : (
+                <>
+                  <div className="loanStateTitle">Currently borrowed</div>
+                  <div className="loanStateText">Borrowed: {fmt(activeLoanForThisBook.borrowedAtUtc)}</div>
+                  <div className="loanStateText">Due: {fmt(activeLoanForThisBook.dueAtUtc)}</div>
+                </>
+              )}
+            </div>
+
+            <div className="bookActionRow">
+              {!activeLoanForThisBook ? (
+                <button className="btn primary" onClick={onBorrow} disabled={busy || loanBusy} type="button">
+                  {loanBusy ? "Processing…" : "Borrow this book"}
+                </button>
+              ) : (
+                <button className="btn secondary" onClick={onReturn} disabled={busy || loanBusy} type="button">
+                  {loanBusy ? "Processing…" : "Return this book"}
+                </button>
+              )}
+
+              <button className="btn secondary" onClick={onBack} type="button">
+                Back to catalog
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
       {book && edit && (
-        <div style={{ marginTop: 12 }}>
+        <div className="surfaceCard">
+          <div className="sectionTitle">Edit Book</div>
+          <div className="sectionSubtitle">Update metadata and description for this title.</div>
+
           <label>Title</label>
           <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />
 
@@ -287,11 +362,7 @@ export default function BookDetails({
           <input value={form.isbn ?? ""} onChange={(e) => setForm((p) => ({ ...p, isbn: e.target.value }))} />
 
           <label>Description</label>
-          <textarea
-            rows={5}
-            value={form.description ?? ""}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-          />
+          <textarea rows={5} value={form.description ?? ""} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
 
           <div className="grid2">
             <button className="btn primary" onClick={onSave} disabled={busy} type="button">

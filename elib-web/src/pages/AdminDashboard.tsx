@@ -24,52 +24,128 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
   }, []);
 
   return (
-    <section className="page-section">
-      <div className="toolbar toolbar--split">
-        <button className="btn secondary btn-inline" style={{ marginTop: 0 }} onClick={onBack} type="button">
+    <div className="bookDetailsShell">
+      <div className="toolbar">
+        <button className="btn secondary bookBackBar" onClick={onBack} type="button">
           ← Back to catalog
         </button>
-        <button className="btn secondary btn-inline" style={{ marginTop: 0 }} onClick={load} disabled={busy} type="button">
+
+        <button
+          className="btn secondary"
+          style={{ marginTop: 0, width: "auto" }}
+          onClick={load}
+          disabled={busy}
+          type="button"
+        >
           {busy ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
       {err && <div className="msg error">{err}</div>}
 
+      <div className="surfaceCard">
+        <div className="sectionTitle">Admin Dashboard</div>
+        <div className="sectionSubtitle">
+          Monitor loan activity, active borrowing, overdue items, and high-usage users.
+        </div>
+      </div>
+
       {data && (
         <>
-          <div className="stats-grid stats-grid--triple">
-            <div className="stat-card">
-              <div className="stat-card__label">Total loans</div>
-              <div className="stat-card__value">{data.totalLoans}</div>
+          <div className="bookInfoGrid">
+            <div className="infoMiniCard">
+              <div className="infoMiniLabel">Total Loans</div>
+              <div
+                className="infoMiniValue"
+                style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em" }}
+              >
+                {data.totalLoans}
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-card__label">Active loans</div>
-              <div className="stat-card__value">{data.activeLoans}</div>
+
+            <div className="infoMiniCard">
+              <div className="infoMiniLabel">Active Loans</div>
+              <div
+                className="infoMiniValue"
+                style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em" }}
+              >
+                {data.activeLoans}
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-card__label">Overdue loans</div>
-              <div className="stat-card__value">{data.overdueLoans}</div>
+
+            <div className="infoMiniCard">
+              <div className="infoMiniLabel">Overdue Loans</div>
+              <div
+                className="infoMiniValue"
+                style={{
+                  fontSize: 28,
+                  fontWeight: 900,
+                  letterSpacing: "-.03em",
+                  color: data.overdueLoans > 0 ? "var(--danger)" : "var(--txt)"
+                }}
+              >
+                {data.overdueLoans}
+              </div>
             </div>
           </div>
 
-          <div className="summary-card">
-            <div className="section-kicker">Insights</div>
-            <h3>Top borrowers</h3>
-            <div className="borrower-list">
-              {data.topBorrowers.map((item, index) => (
-                <div key={item.userId} className="borrower-row">
-                  <div className="borrower-rank">#{index + 1}</div>
-                  <div>
-                    <div className="borrower-name">User ID {item.userId}</div>
-                    <div className="muted small">{item.total} total loan(s)</div>
+          <div className="surfaceCard">
+            <div className="sectionTitle">Top Borrowers</div>
+            <div className="sectionSubtitle">
+              Users with the highest borrowing activity across the platform.
+            </div>
+
+            <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
+              {data.topBorrowers.length === 0 ? (
+                <div className="muted small">No borrower activity yet.</div>
+              ) : (
+                data.topBorrowers.map((item, index) => (
+                  <div
+                    key={item.userId}
+                    className="loanCard"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 14
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+                      <div
+                        style={{
+                          width: 46,
+                          height: 46,
+                          borderRadius: 14,
+                          display: "grid",
+                          placeItems: "center",
+                          fontWeight: 900,
+                          color: "white",
+                          background: "linear-gradient(135deg, #60a5fa, #8b5cf6)",
+                          boxShadow: "0 10px 18px rgba(59,130,246,.18)",
+                          flexShrink: 0
+                        }}
+                      >
+                        #{index + 1}
+                      </div>
+
+                      <div style={{ minWidth: 0 }}>
+                        <div className="bookTitle" style={{ marginBottom: 2 }}>
+                          User ID {item.userId}
+                        </div>
+                        <div className="muted small">Borrowing activity summary</div>
+                      </div>
+                    </div>
+
+                    <div className="metaTag" style={{ flexShrink: 0 }}>
+                      {item.total} loan{item.total === 1 ? "" : "s"}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </>
       )}
-    </section>
+    </div>
   );
 }

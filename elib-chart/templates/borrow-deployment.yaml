@@ -22,7 +22,7 @@ spec:
           image: "{{ .Values.borrow.image.repository }}:{{ .Values.borrow.image.tag }}"
           imagePullPolicy: {{ .Values.borrow.image.pullPolicy }}
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.borrow.containerPort }}
               name: http
           env:
             - name: ConnectionStrings__Default
@@ -32,6 +32,8 @@ spec:
                   key: borrow-connection-string
             - name: ASPNETCORE_ENVIRONMENT
               value: {{ .Values.borrow.env.ASPNETCORE_ENVIRONMENT | quote }}
+            - name: ASPNETCORE_URLS
+              value: {{ .Values.borrow.env.ASPNETCORE_URLS | quote }}
             - name: Database__Host
               valueFrom:
                 secretKeyRef:
