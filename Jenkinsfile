@@ -109,30 +109,41 @@ pipeline {
             --query SecretString \
             --output text > .tmp/values-secret.yaml
 
-          ls -la .tmp
-
           if helm status elib -n elib >/dev/null 2>&1; then
             helm upgrade elib ./elib-chart \
               -n elib \
               -f ./elib-chart/values.yaml \
-              -f .tmp/values-secret.yaml
+              -f .tmp/values-secret.yaml \
+              --set auth.image.tag=$BUILD_TAG_ID \
+              --set catalog.image.tag=$BUILD_TAG_ID \
+              --set borrow.image.tag=$BUILD_TAG_ID \
+              --set web.image.tag=$BUILD_TAG_ID
           else
             helm install elib ./elib-chart \
               -n elib \
               -f ./elib-chart/values.yaml \
-              -f .tmp/values-secret.yaml
+              -f .tmp/values-secret.yaml \
+              --set auth.image.tag=$BUILD_TAG_ID \
+              --set catalog.image.tag=$BUILD_TAG_ID \
+              --set borrow.image.tag=$BUILD_TAG_ID \
+              --set web.image.tag=$BUILD_TAG_ID
           fi
 
           rm -f .tmp/values-secret.yaml
         '''
       }
     }
-
+    
     stage('Verify Deployment') {
       steps {
         sh '''
           set -e
-          kubectl get pods -n elib
+          kubectl rollout status deployment/elib-chart-auth -n elib --timeout=5m
+          kubectl rollout status deployment/elib-chart-catalog -n elib --timeout=5m
+          kubectl rollout status deployment/elib-chart-borrow -n elib --timeout=5m
+          kubectl rollout status deployment/elib-chart-web -n elib --timeout=5m
+
+          kubectl get pods -n elib -o wide
           kubectl get svc -n elib
           kubectl get ingress -n elib
         '''
