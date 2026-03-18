@@ -11,3 +11,10 @@ dist/
 coverage/
 .git-credentials
 Dockerfile.*.local
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+*.pem
+elib-chart/values-secret.yaml
+**/values-secret.yaml
