@@ -72,7 +72,7 @@ pipeline {
       steps {
         sh '''
           set -e
-          docker build -t $ECR_REGISTRY/elib-web:$BUILD_TAG_ID -f ./web/Dockerfile .
+          docker build -t $ECR_REGISTRY/elib-web:$BUILD_TAG_ID -f ./elib-web/Dockerfile .
           docker tag $ECR_REGISTRY/elib-web:$BUILD_TAG_ID $ECR_REGISTRY/elib-web:latest
         '''
       }
