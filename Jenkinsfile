@@ -6,7 +6,7 @@ pipeline {
     AWS_ACCOUNT  = '884537046542'
     ECR_REGISTRY = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
     KUBECONFIG   = '/var/lib/jenkins/.kube/config'
-    BUILD_TAG_ID = "${env.BUILD_NUMBER}"
+    IMAGE_TAG    = "${env.BUILD_NUMBER}"
   }
 
   stages {
@@ -38,42 +38,15 @@ pipeline {
       }
     }
 
-    stage('Build Auth Image') {
+    stage('Build Images') {
       steps {
         sh '''
           set -e
-          docker build -t $ECR_REGISTRY/elib-auth:$BUILD_TAG_ID -f ./AuthService/Dockerfile .
-          docker tag $ECR_REGISTRY/elib-auth:$BUILD_TAG_ID $ECR_REGISTRY/elib-auth:latest
-        '''
-      }
-    }
 
-    stage('Build Catalog Image') {
-      steps {
-        sh '''
-          set -e
-          docker build -t $ECR_REGISTRY/elib-catalog:$BUILD_TAG_ID -f ./CatalogService/Dockerfile .
-          docker tag $ECR_REGISTRY/elib-catalog:$BUILD_TAG_ID $ECR_REGISTRY/elib-catalog:latest
-        '''
-      }
-    }
-
-    stage('Build Borrow Image') {
-      steps {
-        sh '''
-          set -e
-          docker build -t $ECR_REGISTRY/elib-borrow:$BUILD_TAG_ID -f ./BorrowService/Dockerfile .
-          docker tag $ECR_REGISTRY/elib-borrow:$BUILD_TAG_ID $ECR_REGISTRY/elib-borrow:latest
-        '''
-      }
-    }
-
-    stage('Build Web Image') {
-      steps {
-        sh '''
-          set -e
-          docker build -t $ECR_REGISTRY/elib-web:$BUILD_TAG_ID -f ./elib-web/Dockerfile ./elib-web
-          docker tag $ECR_REGISTRY/elib-web:$BUILD_TAG_ID $ECR_REGISTRY/elib-web:latest
+          docker build -t $ECR_REGISTRY/elib-auth:$IMAGE_TAG -f ./AuthService/Dockerfile .
+          docker build -t $ECR_REGISTRY/elib-catalog:$IMAGE_TAG -f ./CatalogService/Dockerfile .
+          docker build -t $ECR_REGISTRY/elib-borrow:$IMAGE_TAG -f ./BorrowService/Dockerfile .
+          docker build -t $ECR_REGISTRY/elib-web:$IMAGE_TAG -f ./elib-web/Dockerfile ./elib-web
         '''
       }
     }
@@ -82,17 +55,11 @@ pipeline {
       steps {
         sh '''
           set -e
-          docker push $ECR_REGISTRY/elib-auth:$BUILD_TAG_ID
-          docker push $ECR_REGISTRY/elib-auth:latest
 
-          docker push $ECR_REGISTRY/elib-catalog:$BUILD_TAG_ID
-          docker push $ECR_REGISTRY/elib-catalog:latest
-
-          docker push $ECR_REGISTRY/elib-borrow:$BUILD_TAG_ID
-          docker push $ECR_REGISTRY/elib-borrow:latest
-
-          docker push $ECR_REGISTRY/elib-web:$BUILD_TAG_ID
-          docker push $ECR_REGISTRY/elib-web:latest
+          docker push $ECR_REGISTRY/elib-auth:$IMAGE_TAG
+          docker push $ECR_REGISTRY/elib-catalog:$IMAGE_TAG
+          docker push $ECR_REGISTRY/elib-borrow:$IMAGE_TAG
+          docker push $ECR_REGISTRY/elib-web:$IMAGE_TAG
         '''
       }
     }
@@ -114,26 +81,26 @@ pipeline {
               -n elib \
               -f ./elib-chart/values.yaml \
               -f .tmp/values-secret.yaml \
-              --set auth.image.tag=$BUILD_TAG_ID \
-              --set catalog.image.tag=$BUILD_TAG_ID \
-              --set borrow.image.tag=$BUILD_TAG_ID \
-              --set web.image.tag=$BUILD_TAG_ID
+              --set auth.image.tag=$IMAGE_TAG \
+              --set catalog.image.tag=$IMAGE_TAG \
+              --set borrow.image.tag=$IMAGE_TAG \
+              --set web.image.tag=$IMAGE_TAG
           else
             helm install elib ./elib-chart \
               -n elib \
               -f ./elib-chart/values.yaml \
               -f .tmp/values-secret.yaml \
-              --set auth.image.tag=$BUILD_TAG_ID \
-              --set catalog.image.tag=$BUILD_TAG_ID \
-              --set borrow.image.tag=$BUILD_TAG_ID \
-              --set web.image.tag=$BUILD_TAG_ID
+              --set auth.image.tag=$IMAGE_TAG \
+              --set catalog.image.tag=$IMAGE_TAG \
+              --set borrow.image.tag=$IMAGE_TAG \
+              --set web.image.tag=$IMAGE_TAG
           fi
 
           rm -f .tmp/values-secret.yaml
         '''
       }
     }
-    
+
     stage('Verify Deployment') {
       steps {
         sh '''
@@ -146,6 +113,19 @@ pipeline {
           kubectl get pods -n elib -o wide
           kubectl get svc -n elib
           kubectl get ingress -n elib
+        '''
+      }
+    }
+
+    stage('Cleanup Local Images') {
+      steps {
+        sh '''
+          set +e
+          docker rmi $ECR_REGISTRY/elib-auth:$IMAGE_TAG
+          docker rmi $ECR_REGISTRY/elib-catalog:$IMAGE_TAG
+          docker rmi $ECR_REGISTRY/elib-borrow:$IMAGE_TAG
+          docker rmi $ECR_REGISTRY/elib-web:$IMAGE_TAG
+          docker image prune -f
         '''
       }
     }
