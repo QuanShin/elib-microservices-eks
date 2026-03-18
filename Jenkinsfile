@@ -111,10 +111,17 @@ pipeline {
 
           ls -la .tmp
 
-          helm upgrade --install elib ./elib-chart \
-            -n elib \
-            -f ./elib-chart/values.yaml \
-            -f .tmp/values-secret.yaml
+          if helm status elib -n elib >/dev/null 2>&1; then
+            helm upgrade elib ./elib-chart \
+              -n elib \
+              -f ./elib-chart/values.yaml \
+              -f .tmp/values-secret.yaml
+          else
+            helm install elib ./elib-chart \
+              -n elib \
+              -f ./elib-chart/values.yaml \
+              -f .tmp/values-secret.yaml
+          fi
 
           rm -f .tmp/values-secret.yaml
         '''
