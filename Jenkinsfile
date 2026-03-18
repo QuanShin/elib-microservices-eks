@@ -101,10 +101,22 @@ pipeline {
       steps {
         sh '''
           set -e
+          mkdir -p .tmp
+
+          aws secretsmanager get-secret-value \
+            --region $AWS_REGION \
+            --secret-id elib/dev/helm-values-secret \
+            --query SecretString \
+            --output text > .tmp/values-secret.yaml
+
+          ls -la .tmp
+
           helm upgrade --install elib ./elib-chart \
             -n elib \
             -f ./elib-chart/values.yaml \
-            -f ./elib-chart/values-secret.yaml
+            -f .tmp/values-secret.yaml
+
+          rm -f .tmp/values-secret.yaml
         '''
       }
     }
