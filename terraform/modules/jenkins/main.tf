@@ -33,11 +33,11 @@ resource "aws_security_group" "jenkins" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "HTTP for Jenkins UI"
+    description = "Jenkins UI admin access"
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.allowed_ssh_cidr]
   }
 
   ingress {
@@ -103,6 +103,24 @@ resource "aws_iam_role_policy" "jenkins_eks_describe" {
           "eks:DescribeCluster"
         ]
         Resource = "arn:aws:eks:${var.aws_region}:884537046542:cluster/elib-eks"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "jenkins_secretsmanager_read" {
+  name = "${var.name}-secretsmanager-read"
+  role = aws_iam_role.jenkins.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:884537046542:secret:elib/dev/helm-values-secret*"
       }
     ]
   })
