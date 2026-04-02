@@ -155,6 +155,10 @@ pipeline {
               -n elib \
               -f ./elib-chart/values.yaml \
               -f .tmp/values-secret.yaml \
+              --set imageTags.auth=$IMAGE_TAG \
+              --set imageTags.catalog=$IMAGE_TAG \
+              --set imageTags.borrow=$IMAGE_TAG \
+              --set imageTags.web=$IMAGE_TAG \
               --set auth.image.tag=$IMAGE_TAG \
               --set catalog.image.tag=$IMAGE_TAG \
               --set borrow.image.tag=$IMAGE_TAG \
@@ -167,6 +171,10 @@ pipeline {
               -n elib \
               -f ./elib-chart/values.yaml \
               -f .tmp/values-secret.yaml \
+              --set imageTags.auth=$IMAGE_TAG \
+              --set imageTags.catalog=$IMAGE_TAG \
+              --set imageTags.borrow=$IMAGE_TAG \
+              --set imageTags.web=$IMAGE_TAG \
               --set auth.image.tag=$IMAGE_TAG \
               --set catalog.image.tag=$IMAGE_TAG \
               --set borrow.image.tag=$IMAGE_TAG \
@@ -180,7 +188,6 @@ pipeline {
         '''
       }
     }
-
     stage('Verify Deployment') {
       steps {
         sh '''
