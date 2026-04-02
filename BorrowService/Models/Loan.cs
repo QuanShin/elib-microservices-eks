@@ -1,14 +1,12 @@
-namespace BorrowService.Models;
+namespace BorrowService.Models; // Put entity in BorrowService.Models namespace.
 
-public class Loan
+public class Loan // Represents a borrow transaction.
 {
-    public int Id { get; set; }
+    public int Id { get; set; } // Primary key.
 
-    // JWT sub -> store as string (safe) or int (if you want). We'll use int because your sub is numeric.
-    public int UserId { get; set; }
-    public int BookId { get; set; }
-
-    public DateTime BorrowedAtUtc { get; set; } = DateTime.UtcNow;
-    public DateTime DueAtUtc { get; set; }
-    public DateTime? ReturnedAtUtc { get; set; }
+    public int UserId { get; set; } // User id from JWT/auth service.
+    public int BookId { get; set; } // Book id from catalog service.
+    public DateTime BorrowedAtUtc { get; set; } // Borrow timestamp.
+    public DateTime DueAtUtc { get; set; } // Due date.
+    public DateTime? ReturnedAtUtc { get; set; } // Return timestamp if returned.
 }

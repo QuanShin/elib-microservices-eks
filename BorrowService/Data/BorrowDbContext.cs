@@ -1,22 +1,19 @@
-using BorrowService.Models;
-using Microsoft.EntityFrameworkCore;
+using BorrowService.Models; // Import Loan model.
+using Microsoft.EntityFrameworkCore; // EF Core.
 
-namespace BorrowService.Data;
+namespace BorrowService.Data; // DbContext namespace.
 
-public class BorrowDbContext : DbContext
+public class BorrowDbContext : DbContext // Borrow database context.
 {
-    public DbSet<Loan> Loans => Set<Loan>();
+    public BorrowDbContext(DbContextOptions<BorrowDbContext> options) : base(options) // Standard constructor.
+    {
+    }
 
-    public BorrowDbContext(DbContextOptions<BorrowDbContext> options) : base(options) { }
+    public DbSet<Loan> Loans => Set<Loan>(); // Loans table.
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder modelBuilder) // Configure indexes.
     {
         modelBuilder.Entity<Loan>()
-            .HasIndex(x => new { x.UserId, x.BookId, x.ReturnedAtUtc });
-
-        // prevent duplicate active loans for the same book by same user (soft enforcement)
-        modelBuilder.Entity<Loan>()
-            .HasIndex(x => new { x.UserId, x.BookId })
-            .HasDatabaseName("IX_User_Book");
+            .HasIndex(x => new { x.UserId, x.BookId, x.ReturnedAtUtc }); // Helps duplicate-active-loan checks.
     }
 }

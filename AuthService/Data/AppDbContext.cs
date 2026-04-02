@@ -1,27 +1,31 @@
-using Microsoft.EntityFrameworkCore;
-using AuthService.Models;
+using AuthService.Models; // Import entity models.
+using Microsoft.EntityFrameworkCore; // EF Core types.
 
-namespace AuthService.Data;
+namespace AuthService.Data; // DbContext namespace.
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext // Auth database context.
 {
-    public DbSet<User> Users => Set<User>();
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) // Standard EF constructor.
+    {
+    }
 
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public DbSet<User> Users => Set<User>(); // Users table.
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>(); // RefreshTokens table.
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder modelBuilder) // Configure indexes/relations.
     {
         modelBuilder.Entity<User>()
-            .HasIndex(u => u.Email)
+            .HasIndex(x => x.Email) // Email must be unique.
             .IsUnique();
 
         modelBuilder.Entity<RefreshToken>()
-            .HasIndex(rt => rt.TokenHash);
+            .HasIndex(x => x.TokenHash) // Token hash should be unique.
+            .IsUnique();
 
         modelBuilder.Entity<RefreshToken>()
-            .HasOne(rt => rt.User)
-            .WithMany()
-            .HasForeignKey(rt => rt.UserId);
+            .HasOne(x => x.User) // One refresh token belongs to one user.
+            .WithMany(x => x.RefreshTokens) // One user has many refresh tokens.
+            .HasForeignKey(x => x.UserId) // FK column.
+            .OnDelete(DeleteBehavior.Cascade); // Delete tokens if user is deleted.
     }
 }

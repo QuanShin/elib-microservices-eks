@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adminSummary, type BorrowSummary } from "../lib/borrowAdminApi";
 
 export default function AdminDashboard({ onBack }: { onBack: () => void }) {
@@ -23,6 +23,20 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
     load();
   }, []);
 
+  const total = data?.total ?? 0;
+  const active = data?.active ?? 0;
+  const returned = data?.returned ?? 0;
+
+  const activePercent = useMemo(() => {
+    if (!total) return 0;
+    return Math.round((active / total) * 100);
+  }, [active, total]);
+
+  const returnedPercent = useMemo(() => {
+    if (!total) return 0;
+    return Math.round((returned / total) * 100);
+  }, [returned, total]);
+
   return (
     <div className="bookDetailsShell">
       <div className="toolbar">
@@ -46,106 +60,97 @@ export default function AdminDashboard({ onBack }: { onBack: () => void }) {
       <div className="surfaceCard">
         <div className="sectionTitle">Admin Dashboard</div>
         <div className="sectionSubtitle">
-          Monitor loan activity, active borrowing, overdue items, and high-usage users.
+          Monitor total borrowing volume, active circulation, and returned items.
         </div>
       </div>
 
-      {data && (
-        <>
-          <div className="bookInfoGrid">
-            <div className="infoMiniCard">
-              <div className="infoMiniLabel">Total Loans</div>
-              <div
-                className="infoMiniValue"
-                style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em" }}
-              >
-                {data.totalLoans}
-              </div>
+      <div className="bookInfoGrid">
+        <div className="infoMiniCard">
+          <div className="infoMiniLabel">Total Loans</div>
+          <div className="infoMiniValue" style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em" }}>
+            {total}
+          </div>
+        </div>
+
+        <div className="infoMiniCard">
+          <div className="infoMiniLabel">Active Loans</div>
+          <div className="infoMiniValue" style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em" }}>
+            {active}
+          </div>
+        </div>
+
+        <div className="infoMiniCard">
+          <div className="infoMiniLabel">Returned Loans</div>
+          <div className="infoMiniValue" style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em" }}>
+            {returned}
+          </div>
+        </div>
+      </div>
+
+      <div className="surfaceCard">
+        <div className="sectionTitle">Loan Distribution</div>
+        <div className="sectionSubtitle">
+          Visual breakdown of active versus returned borrowing records.
+        </div>
+
+        <div style={{ display: "grid", gap: 16, marginTop: 20 }}>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span className="muted small">Active</span>
+              <span className="muted small">
+                {active} ({activePercent}%)
+              </span>
             </div>
 
-            <div className="infoMiniCard">
-              <div className="infoMiniLabel">Active Loans</div>
+            <div
+              style={{
+                width: "100%",
+                height: 14,
+                borderRadius: 999,
+                background: "rgba(99, 102, 241, 0.12)",
+                overflow: "hidden"
+              }}
+            >
               <div
-                className="infoMiniValue"
-                style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-.03em" }}
-              >
-                {data.activeLoans}
-              </div>
-            </div>
-
-            <div className="infoMiniCard">
-              <div className="infoMiniLabel">Overdue Loans</div>
-              <div
-                className="infoMiniValue"
                 style={{
-                  fontSize: 28,
-                  fontWeight: 900,
-                  letterSpacing: "-.03em",
-                  color: data.overdueLoans > 0 ? "var(--danger)" : "var(--txt)"
+                  width: `${activePercent}%`,
+                  height: "100%",
+                  borderRadius: 999,
+                  background: "linear-gradient(90deg, #60a5fa, #8b5cf6)"
                 }}
-              >
-                {data.overdueLoans}
-              </div>
+              />
             </div>
           </div>
 
-          <div className="surfaceCard">
-            <div className="sectionTitle">Top Borrowers</div>
-            <div className="sectionSubtitle">
-              Users with the highest borrowing activity across the platform.
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span className="muted small">Returned</span>
+              <span className="muted small">
+                {returned} ({returnedPercent}%)
+              </span>
             </div>
 
-            <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
-              {data.topBorrowers.length === 0 ? (
-                <div className="muted small">No borrower activity yet.</div>
-              ) : (
-                data.topBorrowers.map((item, index) => (
-                  <div
-                    key={item.userId}
-                    className="loanCard"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 14
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
-                      <div
-                        style={{
-                          width: 46,
-                          height: 46,
-                          borderRadius: 14,
-                          display: "grid",
-                          placeItems: "center",
-                          fontWeight: 900,
-                          color: "white",
-                          background: "linear-gradient(135deg, #60a5fa, #8b5cf6)",
-                          boxShadow: "0 10px 18px rgba(59,130,246,.18)",
-                          flexShrink: 0
-                        }}
-                      >
-                        #{index + 1}
-                      </div>
-
-                      <div style={{ minWidth: 0 }}>
-                        <div className="bookTitle" style={{ marginBottom: 2 }}>
-                          User ID {item.userId}
-                        </div>
-                        <div className="muted small">Borrowing activity summary</div>
-                      </div>
-                    </div>
-
-                    <div className="metaTag" style={{ flexShrink: 0 }}>
-                      {item.total} loan{item.total === 1 ? "" : "s"}
-                    </div>
-                  </div>
-                ))
-              )}
+            <div
+              style={{
+                width: "100%",
+                height: 14,
+                borderRadius: 999,
+                background: "rgba(16, 185, 129, 0.12)",
+                overflow: "hidden"
+              }}
+            >
+              <div
+                style={{
+                  width: `${returnedPercent}%`,
+                  height: "100%",
+                  borderRadius: 999,
+                  background: "linear-gradient(90deg, #34d399, #10b981)"
+                }}
+              />
             </div>
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

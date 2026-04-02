@@ -16,13 +16,26 @@ spec:
       labels:
         {{- include "elib-chart.componentSelectorLabels" (dict "root" . "name" "web") | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "web" "serviceAccount" .Values.web.serviceAccount) }}
       containers:
         - name: web
-          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          image: "{{ .Values.web.image.repository }}:{{ default .Values.imageTags.web .Values.web.image.tag }}"
           imagePullPolicy: {{ .Values.web.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.web.containerPort }}
               name: http
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.web.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.web.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.probes.liveness.periodSeconds }}
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
 {{- end }}

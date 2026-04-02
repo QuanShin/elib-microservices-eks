@@ -19,7 +19,7 @@ spec:
       serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "catalog" "serviceAccount" .Values.catalog.serviceAccount) }}
       containers:
         - name: catalog
-          image: "{{ .Values.catalog.image.repository }}:{{ .Values.catalog.image.tag }}"
+          image: "{{ .Values.catalog.image.repository }}:{{ default .Values.imageTags.catalog .Values.catalog.image.tag }}"
           imagePullPolicy: {{ .Values.catalog.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.catalog.containerPort }}
@@ -59,6 +59,18 @@ spec:
               value: {{ .Values.catalog.env.Jwt__Audience | quote }}
             - name: Jwt__JwksUrl
               value: {{ .Values.catalog.env.Jwt__JwksUrl | quote }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.catalog.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.catalog.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.catalog.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.catalog.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.catalog.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.catalog.probes.liveness.periodSeconds }}
           resources:
             {{- toYaml .Values.catalog.resources | nindent 12 }}
 {{- end }}

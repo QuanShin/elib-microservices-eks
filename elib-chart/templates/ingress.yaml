@@ -8,6 +8,11 @@ metadata:
     {{- range $key, $value := .Values.ingress.annotations }}
     {{ $key }}: {{ $value | quote }}
     {{- end }}
+    {{- if .Values.ingress.tls.enabled }}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.ingress.tls.certificateArn | quote }}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:

@@ -19,7 +19,7 @@ spec:
       serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "auth" "serviceAccount" .Values.auth.serviceAccount) }}
       containers:
         - name: auth
-          image: "{{ .Values.auth.image.repository }}:{{ .Values.auth.image.tag }}"
+          image: "{{ .Values.auth.image.repository }}:{{ default .Values.imageTags.auth .Values.auth.image.tag }}"
           imagePullPolicy: {{ .Values.auth.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.auth.containerPort }}
@@ -74,6 +74,18 @@ spec:
             - name: jwt-files
               mountPath: /keys
               readOnly: true
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.auth.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.auth.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.auth.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.auth.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.auth.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.auth.probes.liveness.periodSeconds }}
           resources:
             {{- toYaml .Values.auth.resources | nindent 12 }}
       volumes:

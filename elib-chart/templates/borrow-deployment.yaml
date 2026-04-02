@@ -19,7 +19,7 @@ spec:
       serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "borrow" "serviceAccount" .Values.borrow.serviceAccount) }}
       containers:
         - name: borrow
-          image: "{{ .Values.borrow.image.repository }}:{{ .Values.borrow.image.tag }}"
+          image: "{{ .Values.borrow.image.repository }}:{{ default .Values.imageTags.borrow .Values.borrow.image.tag }}"
           imagePullPolicy: {{ .Values.borrow.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.borrow.containerPort }}
@@ -59,6 +59,20 @@ spec:
               value: {{ .Values.borrow.env.Jwt__Audience | quote }}
             - name: Jwt__JwksUrl
               value: {{ .Values.borrow.env.Jwt__JwksUrl | quote }}
+            - name: Services__CatalogBaseUrl
+              value: {{ .Values.borrow.env.Services__CatalogBaseUrl | quote }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.borrow.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.borrow.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.borrow.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.borrow.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.borrow.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.borrow.probes.liveness.periodSeconds }}
           resources:
             {{- toYaml .Values.borrow.resources | nindent 12 }}
 {{- end }}

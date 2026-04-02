@@ -5,10 +5,19 @@ namespaceOverride: elib
 global:
   imagePullPolicy: IfNotPresent
 
+imageTags:
+  auth: "latest"
+  catalog: "latest"
+  borrow: "latest"
+  web: "latest"
+
 ingress:
   enabled: false
   className: alb
   host: ""
+  tls:
+    enabled: false
+    certificateArn: ""
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
@@ -20,7 +29,7 @@ auth:
   image:
     repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-auth
     pullPolicy: Always
-    tag: latest
+    tag: ""
   service:
     type: ClusterIP
     port: 8081
@@ -41,6 +50,15 @@ auth:
     Jwt__RefreshTokenDays: "14"
     Keys__PrivateKeyPath: /keys/jwt_private.pem
     Keys__PublicKeyPath: /keys/jwt_public.pem
+  probes:
+    readiness:
+      path: /.well-known/jwks.json
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    liveness:
+      path: /.well-known/jwks.json
+      initialDelaySeconds: 20
+      periodSeconds: 15
   resources:
     requests:
       cpu: 100m
@@ -55,7 +73,7 @@ catalog:
   image:
     repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-catalog
     pullPolicy: Always
-    tag: latest
+    tag: ""
   service:
     type: ClusterIP
     port: 8082
@@ -73,6 +91,15 @@ catalog:
     Jwt__Issuer: elib-auth
     Jwt__Audience: elib-web
     Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8081/.well-known/jwks.json"
+  probes:
+    readiness:
+      path: /catalog/health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    liveness:
+      path: /catalog/health
+      initialDelaySeconds: 20
+      periodSeconds: 15
   resources:
     requests:
       cpu: 100m
@@ -87,7 +114,7 @@ borrow:
   image:
     repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-borrow
     pullPolicy: Always
-    tag: latest
+    tag: ""
   service:
     type: ClusterIP
     port: 8083
@@ -98,6 +125,7 @@ borrow:
     annotations: {}
     name: ""
   env:
+    Services__CatalogBaseUrl: "http://elib-chart-catalog.elib.svc.cluster.local:8082"
     ASPNETCORE_ENVIRONMENT: Production
     ASPNETCORE_URLS: http://+:8083
     Database__Port: "3306"
@@ -105,6 +133,15 @@ borrow:
     Jwt__Issuer: elib-auth
     Jwt__Audience: elib-web
     Jwt__JwksUrl: "http://elib-chart-auth.elib.svc.cluster.local:8081/.well-known/jwks.json"
+  probes:
+    readiness:
+      path: /borrow/health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    liveness:
+      path: /borrow/health
+      initialDelaySeconds: 20
+      periodSeconds: 15
   resources:
     requests:
       cpu: 100m
@@ -119,7 +156,7 @@ web:
   image:
     repository: 884537046542.dkr.ecr.us-east-1.amazonaws.com/elib-web
     pullPolicy: Always
-    tag: latest
+    tag: ""
   service:
     type: ClusterIP
     port: 8080
@@ -129,6 +166,15 @@ web:
     automount: false
     annotations: {}
     name: ""
+  probes:
+    readiness:
+      path: /
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    liveness:
+      path: /
+      initialDelaySeconds: 20
+      periodSeconds: 15
   resources:
     requests:
       cpu: 50m

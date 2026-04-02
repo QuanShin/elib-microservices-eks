@@ -174,15 +174,21 @@ export default function App() {
 
         {view === "add" && isAdmin && (
           <AddBook
-            onCreated={() => {
+            onCreated={(createdId?: number) => {
               setCatalogReloadKey((k) => k + 1);
-              goCatalog();
+
+              if (createdId) {
+                setSelectedBookId(createdId);
+                setView("details");
+              } else {
+                goCatalog();
+              }
+
               setOk("Book added ✅");
               setTimeout(() => setOk(null), 1500);
             }}
           />
         )}
-
         {view === "admin" && isAdmin && <AdminDashboard onBack={goCatalog} />}
       </Suspense>
     );

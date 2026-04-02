@@ -29,21 +29,21 @@ export default defineConfig({
     proxy: {
       // AuthService
       "/api/auth": {
-        target: "http://localhost:5184",
+        target: "http://localhost:5000",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/auth/, "")
       },
 
       // CatalogService
       "/api/catalog": {
-        target: "http://localhost:5237",
+        target: "http://localhost:5001",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/catalog/, "")
       },
 
       // BorrowService
       "/api/borrow": {
-        target: "http://localhost:5259",
+        target: "http://localhost:5002",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/borrow/, "")
       }

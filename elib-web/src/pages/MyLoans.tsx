@@ -164,13 +164,13 @@ export default function MyLoans({
     }
   }
 
-  async function onReturn(bookId: number) {
+  async function onReturn(loanId: number) {
     setBusy(true);
     setErr(null);
     setMetaErr(null);
     setOk(null);
     try {
-      await returnBook(bookId);
+      await returnBook(loanId);
       await load();
       setOk("Returned ✅");
       setTimeout(() => setOk(null), 1500);
@@ -246,7 +246,7 @@ export default function MyLoans({
               {!isHistory && (
                 <button
                   className="btn primary"
-                  onClick={() => onReturn(l.bookId)}
+                  onClick={() => onReturn(l.id)}
                   disabled={busy}
                   type="button"
                 >
