@@ -212,7 +212,7 @@ export default function App() {
                 <div className="heroKicker">Modern library workspace</div>
                 <h1>Borrow books with a cleaner, brighter interface.</h1>
                 <p className="muted">
-                  Your backend and authentication flow stay the same. This update only changes the interface and removes the dead Borrow again action.
+                  Final Year Project
                 </p>
               </div>
               <div className="heroBooks">
@@ -266,7 +266,7 @@ export default function App() {
             {ok && <div className="msg ok">{ok}</div>}
 
             <div className="hint">
-              Auth: <span className="code">/api/auth</span> • Catalog: <span className="code">/api/catalog</span> • Borrow: <span className="code">/api/borrow</span>
+              API: <span className="code">https://api.elibapp.io.vn</span>
             </div>
           </div>
         </div>

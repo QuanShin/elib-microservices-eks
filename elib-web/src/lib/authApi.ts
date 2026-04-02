@@ -1,20 +1,19 @@
 export type LoginResponse = {
   accessToken: string;
-  csrfToken?: string;
-  expiresIn?: number;
+  expiresIn: number;
+  csrfToken: string;
 };
 
-export type MeResponse = {
-  sub: string;
-  email: string;
-  role: string;
-};
+export type MeResponse = { sub: string; email: string; role: string };
 
 let accessToken: string | null = null;
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const AUTH_BASE = `${API_BASE}`;
+
 function getCsrfFromCookie() {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
+  const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
 }
 
 export function getAccessToken() {
@@ -34,27 +33,19 @@ async function safeError(res: Response) {
   }
 }
 
-async function request(
-  path: string,
-  init: RequestInit = {},
-  opts?: { useCsrf?: boolean }
-) {
+async function request(path: string, init: RequestInit = {}, opts?: { useCsrf?: boolean }) {
   const headers: Record<string, string> = {
     ...((init.headers as Record<string, string>) ?? {})
   };
 
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
   if (opts?.useCsrf) {
     const csrf = getCsrfFromCookie();
-    if (csrf) {
-      headers["X-CSRF-Token"] = csrf;
-    }
+    if (csrf) headers["X-CSRF"] = csrf;
   }
 
-  return fetch(`/api/auth${path}`, {
+  return fetch(`${AUTH_BASE}${path}`, {
     ...init,
     headers,
     credentials: "include"
@@ -65,9 +56,8 @@ export async function register(email: string, password: string) {
   const res = await request("/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, password, role: "MEMBER" })
   });
-
   if (!res.ok) throw new Error(await safeError(res));
   return res.json();
 }
@@ -78,7 +68,6 @@ export async function login(email: string, password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password })
   });
-
   if (!res.ok) throw new Error(await safeError(res));
 
   const data = (await res.json()) as LoginResponse;
@@ -86,22 +75,16 @@ export async function login(email: string, password: string) {
   return data;
 }
 
-export async function getMe(): Promise<MeResponse> {
+export async function checkMeNoRefresh(): Promise<MeResponse> {
   const res = await request("/me");
   if (!res.ok) throw new Error(await safeError(res));
   return res.json();
 }
 
-// Backward-compatible alias so old pages still work.
-export async function checkMeNoRefresh(): Promise<MeResponse> {
-  return getMe();
-}
-
 export async function renewSession() {
   const res = await request("/refresh", { method: "POST" }, { useCsrf: true });
   if (!res.ok) throw new Error(await safeError(res));
-
-  const data = (await res.json()) as LoginResponse;
+  const data = await res.json();
   accessToken = data.accessToken;
   return data;
 }
@@ -113,31 +96,16 @@ export async function logout() {
   return res.json();
 }
 
-export async function authFetch(url: string, init: RequestInit = {}) {
-  let headers = new Headers(init.headers || {});
-  if (accessToken) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
-  }
-
-  let res = await fetch(url, {
-    ...init,
-    headers,
-    credentials: "include"
-  });
+export async function authFetch(path: string, init: RequestInit = {}, opts?: { useCsrf?: boolean }) {
+  let res = await request(path, init, opts);
 
   if (res.status === 401) {
-    await renewSession();
-
-    headers = new Headers(init.headers || {});
-    if (accessToken) {
-      headers.set("Authorization", `Bearer ${accessToken}`);
+    try {
+      await renewSession();
+      res = await request(path, init, opts);
+    } catch {
+      clearSession();
     }
-
-    res = await fetch(url, {
-      ...init,
-      headers,
-      credentials: "include"
-    });
   }
 
   return res;

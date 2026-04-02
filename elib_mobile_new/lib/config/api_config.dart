@@ -1,5 +1,5 @@
 class ApiConfig {
-  static const String authBaseUrl = 'http://10.0.2.2:5000';
-  static const String catalogBaseUrl = 'http://10.0.2.2:5001';
-  static const String borrowBaseUrl = 'http://10.0.2.2:5002';
+  static const String authBaseUrl = 'https://api.elibapp.io.vn';
+  static const String catalogBaseUrl = 'https://api.elibapp.io.vn';
+  static const String borrowBaseUrl = 'https://api.elibapp.io.vn';
 }
