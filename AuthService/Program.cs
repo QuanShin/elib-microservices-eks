@@ -91,6 +91,21 @@ rsaPublic.ImportFromPem(publicKeyPem); // Import public PEM.
 var signingKey = new RsaSecurityKey(rsaPrivate) { KeyId = kid }; // Signing key.
 var validationKey = new RsaSecurityKey(rsaPublic) { KeyId = kid }; // Validation key.
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendCors", policy =>
+    {
+        policy
+            .WithOrigins(
+                "https://app.elibapp.io.vn",
+                "http://localhost:5173"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+});
+
 // Register DbContext.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
@@ -124,25 +139,30 @@ builder.Services.AddAuthorization(options =>
 });
 
 // Configure CORS.
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Default", policy =>
-    {
-        policy
-            .AllowAnyHeader() // Allow headers.
-            .AllowAnyMethod() // Allow methods.
-            .SetIsOriginAllowed(_ => true) // Allow dynamic origins.
-            .AllowCredentials(); // Allow cookies.
-    });
-});
 
 var app = builder.Build(); // Build app.
 
-app.UseCors("Default"); // Enable CORS.
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsOptions(context.Request.Method))
+    {
+        context.Response.Headers["Access-Control-Allow-Origin"] = "https://app.elibapp.io.vn";
+        context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "content-type, authorization, x-csrf, x-csrf-token";
+        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
+        return;
+    }
+
+    await next();
+});
+
 app.UseCookiePolicy(new CookiePolicyOptions
 {
     MinimumSameSitePolicy = SameSiteMode.Lax // Safe default cookie policy.
 });
+
+app.UseCors("FrontendCors");
 app.UseAuthentication(); // Enable authentication.
 app.UseAuthorization(); // Enable authorization.
 
@@ -227,12 +247,16 @@ void SetCsrfCookie(HttpResponse response, string csrfToken)
 bool ValidateCsrf(HttpRequest request)
 {
     if (!request.Cookies.TryGetValue("csrf_token", out var cookieValue))
-        return false; // Missing cookie.
-    if (!request.Headers.TryGetValue("X-CSRF-Token", out var headerValue))
-        return false; // Missing header.
-    return string.Equals(cookieValue, headerValue.ToString(), StringComparison.Ordinal); // Must match.
-}
+        return false;
 
+    if (request.Headers.TryGetValue("X-CSRF-Token", out var headerValue))
+        return string.Equals(cookieValue, headerValue.ToString(), StringComparison.Ordinal);
+
+    if (request.Headers.TryGetValue("X-CSRF", out var legacyHeaderValue))
+        return string.Equals(cookieValue, legacyHeaderValue.ToString(), StringComparison.Ordinal);
+
+    return false;
+}
 // Health check.
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
