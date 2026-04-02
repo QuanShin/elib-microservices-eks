@@ -23,6 +23,20 @@ ingress:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
+frontendIngress:
+  enabled: true
+  host: app.elibapp.io.vn
+  tls:
+    enabled: true
+    certificateArn: "arn:aws:acm:us-east-1:884537046542:certificate/a4d36a33-0237-47ac-bd90-880737d7d28a"
+
+apiIngress:
+  enabled: true
+  host: api.elibapp.io.vn
+  tls:
+    enabled: true
+    certificateArn: "arn:aws:acm:us-east-1:884537046542:certificate/a4d36a33-0237-47ac-bd90-880737d7d28a"
+
 auth:
   enabled: true
   replicaCount: 1

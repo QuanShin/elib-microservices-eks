@@ -1,0 +1,75 @@
+{{- if .Values.apiIngress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "elib-chart.fullname" . }}-api
+  namespace: {{ include "elib-chart.namespace" . }}
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.apiIngress.tls.certificateArn | quote }}
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.apiIngress.host | quote }}
+      http:
+        paths:
+          - path: /.well-known/jwks.json
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+                port:
+                  number: {{ .Values.auth.service.port }}
+          - path: /login
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+                port:
+                  number: {{ .Values.auth.service.port }}
+          - path: /register
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+                port:
+                  number: {{ .Values.auth.service.port }}
+          - path: /me
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+                port:
+                  number: {{ .Values.auth.service.port }}
+          - path: /refresh
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+                port:
+                  number: {{ .Values.auth.service.port }}
+          - path: /logout
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "auth") }}
+                port:
+                  number: {{ .Values.auth.service.port }}
+          - path: /catalog
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "catalog") }}
+                port:
+                  number: {{ .Values.catalog.service.port }}
+          - path: /borrow
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "elib-chart.componentFullname" (dict "root" . "name" "borrow") }}
+                port:
+                  number: {{ .Values.borrow.service.port }}
+{{- end }}
