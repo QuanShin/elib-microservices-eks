@@ -19,7 +19,7 @@ spec:
       serviceAccountName: {{ include "elib-chart.serviceAccountName" (dict "root" . "name" "web" "serviceAccount" .Values.web.serviceAccount) }}
       containers:
         - name: web
-          image: "{{ .Values.web.image.repository }}:{{ default .Values.imageTags.web .Values.web.image.tag }}"
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
           imagePullPolicy: {{ .Values.web.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.web.containerPort }}
