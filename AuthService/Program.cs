@@ -1,57 +1,52 @@
-using System.IdentityModel.Tokens.Jwt; // Used for creating JWT tokens.
-using System.Security.Claims; // Used for claim handling.
-using System.Security.Cryptography; // Used for RSA keys and secure token generation.
-using AuthService.Data; // EF Core DbContext namespace.
-using AuthService.DTOs; // DTO namespace.
-using AuthService.Models; // User + RefreshToken models.
-using BCrypt.Net; // Password hashing.
-using Microsoft.AspNetCore.Authentication.JwtBearer; // JWT middleware.
-using Microsoft.AspNetCore.CookiePolicy; // Cookie policy support.
-using Microsoft.EntityFrameworkCore; // EF Core.
-using Microsoft.IdentityModel.Tokens; // Token signing/validation.
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using AuthService.Data;
+using AuthService.DTOs;
+using AuthService.Models;
+using BCrypt.Net;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.CookiePolicy;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
-var builder = WebApplication.CreateBuilder(args); // Create the ASP.NET builder.
+var builder = WebApplication.CreateBuilder(args);
 
-// Load JSON config first.
-builder.Configuration.AddJsonFile("appsettings.json", optional: true); // Base config.
-// Then allow env vars to override.
-builder.Configuration.AddEnvironmentVariables(); // Needed for Helm/Kubernetes.
+builder.Configuration.AddJsonFile("appsettings.json", optional: true);
+builder.Configuration.AddEnvironmentVariables();
 
-// Helper: read required config or fail fast.
 string GetRequired(string key)
 {
-    var value = builder.Configuration[key]; // Read config.
-    if (string.IsNullOrWhiteSpace(value)) // If missing,
-        throw new InvalidOperationException($"Missing configuration: {key}"); // stop clearly.
-    return value; // Return value if found.
+    var value = builder.Configuration[key];
+    if (string.IsNullOrWhiteSpace(value))
+        throw new InvalidOperationException($"Missing configuration: {key}");
+    return value;
 }
 
-// Helper: support mounted file path OR direct config value.
 string ReadSecretFileOrConfig(string fileKey, string configKey)
 {
-    var filePath = builder.Configuration[fileKey]; // Try file path first.
-    if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath)) // If path exists,
-        return File.ReadAllText(filePath).Trim(); // read file contents.
+    var filePath = builder.Configuration[fileKey];
+    if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+        return File.ReadAllText(filePath).Trim();
 
-    var value = builder.Configuration[configKey]; // Try direct config value next.
-    if (!string.IsNullOrWhiteSpace(value)) // If found,
-        return value; // return it.
+    var value = builder.Configuration[configKey];
+    if (!string.IsNullOrWhiteSpace(value))
+        return value;
 
-    throw new InvalidOperationException($"Missing secret for {configKey}"); // Otherwise fail clearly.
+    throw new InvalidOperationException($"Missing secret for {configKey}");
 }
 
-// Helper: build DB connection string from either full connection string or split Database config.
 string GetConnectionString()
 {
-    var direct = builder.Configuration["ConnectionStrings:Default"]; // Prefer full connection string.
+    var direct = builder.Configuration["ConnectionStrings:Default"];
     if (!string.IsNullOrWhiteSpace(direct))
-        return direct; // Use direct string if present.
+        return direct;
 
-    var host = builder.Configuration["Database:Host"]; // DB host.
-    var port = builder.Configuration["Database:Port"]; // DB port.
-    var name = builder.Configuration["Database:Name"]; // DB name.
-    var user = builder.Configuration["Database:User"]; // DB user.
-    var password = builder.Configuration["Database:Password"]; // DB password.
+    var host = builder.Configuration["Database:Host"];
+    var port = builder.Configuration["Database:Port"];
+    var name = builder.Configuration["Database:Name"];
+    var user = builder.Configuration["Database:User"];
+    var password = builder.Configuration["Database:Password"];
 
     if (string.IsNullOrWhiteSpace(host) ||
         string.IsNullOrWhiteSpace(port) ||
@@ -64,32 +59,28 @@ string GetConnectionString()
         );
     }
 
-    return $"server={host};port={port};database={name};user={user};password={password}"; // Build MySQL connection string.
+    return $"server={host};port={port};database={name};user={user};password={password}";
 }
 
-// Read auth config.
-var connStr = GetConnectionString(); // DB connection string.
-var issuer = GetRequired("Jwt:Issuer"); // JWT issuer.
-var audience = GetRequired("Jwt:Audience"); // JWT audience.
-var kid = GetRequired("Jwt:Kid"); // JWT key id.
-var accessMinutes = int.Parse(GetRequired("Jwt:AccessTokenMinutes")); // Access token lifetime.
-var refreshDays = int.Parse(GetRequired("Jwt:RefreshTokenDays")); // Refresh token lifetime.
-var isDev = builder.Environment.IsDevelopment(); // Development flag.
+var connStr = GetConnectionString();
+var issuer = GetRequired("Jwt:Issuer");
+var audience = GetRequired("Jwt:Audience");
+var kid = GetRequired("Jwt:Kid");
+var accessMinutes = int.Parse(GetRequired("Jwt:AccessTokenMinutes"));
+var refreshDays = int.Parse(GetRequired("Jwt:RefreshTokenDays"));
+var isDev = builder.Environment.IsDevelopment();
 
-// Support either file-based keys or inline PEM values.
-var privateKeyPem = ReadSecretFileOrConfig("Keys:PrivateKeyPath", "Jwt:PrivateKeyPem"); // Private key.
-var publicKeyPem = ReadSecretFileOrConfig("Keys:PublicKeyPath", "Jwt:PublicKeyPem"); // Public key.
+var privateKeyPem = ReadSecretFileOrConfig("Keys:PrivateKeyPath", "Jwt:PrivateKeyPem");
+var publicKeyPem = ReadSecretFileOrConfig("Keys:PublicKeyPath", "Jwt:PublicKeyPem");
 
-// Build RSA keys.
-var rsaPrivate = RSA.Create(); // Private RSA key.
-rsaPrivate.ImportFromPem(privateKeyPem); // Import private PEM.
+var rsaPrivate = RSA.Create();
+rsaPrivate.ImportFromPem(privateKeyPem);
 
-var rsaPublic = RSA.Create(); // Public RSA key.
-rsaPublic.ImportFromPem(publicKeyPem); // Import public PEM.
+var rsaPublic = RSA.Create();
+rsaPublic.ImportFromPem(publicKeyPem);
 
-// Create signing/validation keys.
-var signingKey = new RsaSecurityKey(rsaPrivate) { KeyId = kid }; // Signing key.
-var validationKey = new RsaSecurityKey(rsaPublic) { KeyId = kid }; // Validation key.
+var signingKey = new RsaSecurityKey(rsaPrivate) { KeyId = kid };
+var validationKey = new RsaSecurityKey(rsaPublic) { KeyId = kid };
 
 builder.Services.AddCors(options =>
 {
@@ -106,7 +97,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register DbContext.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         connStr,
@@ -114,44 +104,46 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         mySqlOptions => mySqlOptions.EnableRetryOnFailure()
     ));
 
-// Configure JWT auth.
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true, // Check issuer.
-            ValidIssuer = issuer, // Expected issuer.
-            ValidateAudience = true, // Check audience.
-            ValidAudience = audience, // Expected audience.
-            ValidateIssuerSigningKey = true, // Check signing key.
-            IssuerSigningKey = validationKey, // Public key.
-            ValidateLifetime = true, // Check expiry.
-            ClockSkew = TimeSpan.FromSeconds(30) // Allow small drift.
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = validationKey,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 
-// Configure authorization.
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireClaim("role", "ADMIN")); // Require ADMIN role.
+    options.AddPolicy("AdminOnly", policy => policy.RequireClaim("role", "ADMIN"));
 });
 
-// Configure CORS.
-
-var app = builder.Build(); // Build app.
+var app = builder.Build();
 
 app.Use(async (context, next) =>
 {
     if (HttpMethods.IsOptions(context.Request.Method))
     {
-        context.Response.Headers["Access-Control-Allow-Origin"] = "https://app.elibapp.io.vn";
-        context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
-        context.Response.Headers["Access-Control-Allow-Headers"] = "content-type, authorization, x-csrf, x-csrf-token";
-        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
-        context.Response.StatusCode = StatusCodes.Status204NoContent;
-        return;
+        var origin = context.Request.Headers.Origin.ToString();
+
+        if (origin == "https://app.elibapp.io.vn" || origin == "http://localhost:5173")
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+            context.Response.Headers["Vary"] = "Origin";
+            context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+            context.Response.Headers["Access-Control-Allow-Headers"] = "content-type, authorization, x-csrf, x-csrf-token";
+            context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+            context.Response.StatusCode = StatusCodes.Status204NoContent;
+            return;
+        }
     }
 
     await next();
@@ -159,91 +151,83 @@ app.Use(async (context, next) =>
 
 app.UseCookiePolicy(new CookiePolicyOptions
 {
-    MinimumSameSitePolicy = SameSiteMode.Lax // Safe default cookie policy.
+    MinimumSameSitePolicy = SameSiteMode.Lax
 });
 
 app.UseCors("FrontendCors");
-app.UseAuthentication(); // Enable authentication.
-app.UseAuthorization(); // Enable authorization.
+app.UseAuthentication();
+app.UseAuthorization();
 
-// Auto-apply migrations on startup.
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); // Resolve DbContext.
-    await db.Database.MigrateAsync(); // Apply migrations.
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
 }
 
-// Hash refresh token before DB storage.
 static string HashToken(string raw)
 {
-    var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(raw)); // SHA256 hash.
-    return Convert.ToHexString(bytes); // Convert to string.
+    var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(raw));
+    return Convert.ToHexString(bytes);
 }
 
-// Generate secure refresh token.
 static string GenerateRefreshToken() =>
-    Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)); // 48 random bytes.
+    Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
 
-// Safe claim lookup.
 static string? GetClaim(ClaimsPrincipal user, params string[] names)
 {
-    foreach (var name in names) // Try claim names one by one.
+    foreach (var name in names)
     {
-        var value = user.FindFirstValue(name); // Lookup claim.
+        var value = user.FindFirstValue(name);
         if (!string.IsNullOrWhiteSpace(value))
-            return value; // Return first found claim.
+            return value;
     }
-    return null; // Return null if not found.
+    return null;
 }
 
-// Centralized access token creation.
 string IssueAccessToken(User user)
 {
-    var creds = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256); // RSA SHA256 signing.
+    var creds = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
 
     var claims = new List<Claim>
     {
-        new(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // Subject = user id.
-        new(JwtRegisteredClaimNames.Email, user.Email), // Email claim.
-        new("role", user.Role) // App role claim.
+        new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+        new(JwtRegisteredClaimNames.Email, user.Email),
+        new("role", user.Role)
     };
 
     var jwt = new JwtSecurityToken(
-        issuer: issuer, // Issuer.
-        audience: audience, // Audience.
-        claims: claims, // Claims.
-        expires: DateTime.UtcNow.AddMinutes(accessMinutes), // Expiry.
-        signingCredentials: creds // Signing key.
+        issuer: issuer,
+        audience: audience,
+        claims: claims,
+        expires: DateTime.UtcNow.AddMinutes(accessMinutes),
+        signingCredentials: creds
     );
 
-    return new JwtSecurityTokenHandler().WriteToken(jwt); // Serialize JWT.
+    return new JwtSecurityTokenHandler().WriteToken(jwt);
 }
 
-// Set refresh cookie.
 void SetRefreshCookie(HttpResponse response, string refreshToken)
 {
     response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
     {
-        HttpOnly = true, // JS cannot read.
-        Secure = !isDev, // HTTPS only outside dev.
-        SameSite = SameSiteMode.Lax, // Good default.
-        Expires = DateTimeOffset.UtcNow.AddDays(refreshDays) // Expiry.
+        HttpOnly = true,
+        Secure = !isDev,
+        SameSite = SameSiteMode.Lax,
+        Expires = DateTimeOffset.UtcNow.AddDays(refreshDays)
     });
 }
 
-// Set CSRF cookie.
 void SetCsrfCookie(HttpResponse response, string csrfToken)
 {
     response.Cookies.Append("csrf_token", csrfToken, new CookieOptions
     {
-        HttpOnly = false, // Frontend must read this.
-        Secure = !isDev, // HTTPS only outside dev.
-        SameSite = SameSiteMode.Lax, // Same-site protection.
-        Expires = DateTimeOffset.UtcNow.AddDays(refreshDays) // Match refresh lifetime.
+        HttpOnly = false,
+        Secure = !isDev,
+        SameSite = SameSiteMode.Lax,
+        Expires = DateTimeOffset.UtcNow.AddDays(refreshDays)
     });
 }
 
-// Validate CSRF token.
 bool ValidateCsrf(HttpRequest request)
 {
     if (!request.Cookies.TryGetValue("csrf_token", out var cookieValue))
@@ -257,22 +241,20 @@ bool ValidateCsrf(HttpRequest request)
 
     return false;
 }
-// Health check.
+
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
-// Register user.
-// Public registration cannot choose role.
 app.MapPost("/register", async (AppDbContext db, RegisterRequest req) =>
 {
-    var email = (req.Email ?? "").Trim().ToLowerInvariant(); // Normalize email.
-    var password = req.Password ?? ""; // Normalize password.
+    var email = (req.Email ?? "").Trim().ToLowerInvariant();
+    var password = req.Password ?? "";
 
     if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         return Results.BadRequest(new { error = "Email and password are required." });
 
     try
     {
-        _ = new System.Net.Mail.MailAddress(email); // Email format validation.
+        _ = new System.Net.Mail.MailAddress(email);
     }
     catch
     {
@@ -282,20 +264,20 @@ app.MapPost("/register", async (AppDbContext db, RegisterRequest req) =>
     if (password.Length < 8)
         return Results.BadRequest(new { error = "Password must be at least 8 characters." });
 
-    var exists = await db.Users.AnyAsync(u => u.Email == email); // Prevent duplicate email.
+    var exists = await db.Users.AnyAsync(u => u.Email == email);
     if (exists)
         return Results.Conflict(new { error = "Email already exists." });
 
     var user = new User
     {
-        Email = email, // Save normalized email.
-        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password), // Hash password.
-        Role = "MEMBER", // Always default to MEMBER.
-        CreatedAtUtc = DateTime.UtcNow // Audit timestamp.
+        Email = email,
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+        Role = "MEMBER",
+        CreatedAtUtc = DateTime.UtcNow
     };
 
-    db.Users.Add(user); // Add user.
-    await db.SaveChangesAsync(); // Save.
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
 
     return Results.Created($"/users/{user.Id}", new
     {
@@ -305,19 +287,18 @@ app.MapPost("/register", async (AppDbContext db, RegisterRequest req) =>
     });
 });
 
-// Login endpoint.
 app.MapPost("/login", async (AppDbContext db, LoginRequest req, HttpResponse response) =>
 {
-    var email = (req.Email ?? "").Trim().ToLowerInvariant(); // Normalize email.
-    var password = req.Password ?? ""; // Normalize password.
+    var email = (req.Email ?? "").Trim().ToLowerInvariant();
+    var password = req.Password ?? "";
 
-    var user = await db.Users.FirstOrDefaultAsync(x => x.Email == email); // Find user.
-    if (user is null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash)) // Verify password.
+    var user = await db.Users.FirstOrDefaultAsync(x => x.Email == email);
+    if (user is null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
         return Results.Unauthorized();
 
-    var accessToken = IssueAccessToken(user); // Create access token.
+    var accessToken = IssueAccessToken(user);
 
-    var refreshRaw = GenerateRefreshToken(); // Generate refresh token.
+    var refreshRaw = GenerateRefreshToken();
     db.RefreshTokens.Add(new RefreshToken
     {
         UserId = user.Id,
@@ -325,11 +306,11 @@ app.MapPost("/login", async (AppDbContext db, LoginRequest req, HttpResponse res
         ExpiresAtUtc = DateTime.UtcNow.AddDays(refreshDays)
     });
 
-    await db.SaveChangesAsync(); // Save refresh token.
-    SetRefreshCookie(response, refreshRaw); // Set refresh cookie.
+    await db.SaveChangesAsync();
+    SetRefreshCookie(response, refreshRaw);
 
-    var csrfToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)); // Generate CSRF token.
-    SetCsrfCookie(response, csrfToken); // Set CSRF cookie.
+    var csrfToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+    SetCsrfCookie(response, csrfToken);
 
     return Results.Ok(new
     {
@@ -344,8 +325,6 @@ app.MapPost("/login", async (AppDbContext db, LoginRequest req, HttpResponse res
     });
 });
 
-// Refresh endpoint.
-// Rotates refresh token properly.
 app.MapPost("/refresh", async (AppDbContext db, HttpRequest request, HttpResponse response) =>
 {
     if (!ValidateCsrf(request))
@@ -354,19 +333,19 @@ app.MapPost("/refresh", async (AppDbContext db, HttpRequest request, HttpRespons
     if (!request.Cookies.TryGetValue("refresh_token", out var refreshRaw) || string.IsNullOrWhiteSpace(refreshRaw))
         return Results.Json(new { error = "Missing refresh token." }, statusCode: StatusCodes.Status401Unauthorized);
 
-    var tokenHash = HashToken(refreshRaw); // Hash current token.
-    var rt = await db.RefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == tokenHash); // Find token in DB.
+    var tokenHash = HashToken(refreshRaw);
+    var rt = await db.RefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
 
     if (rt is null || rt.RevokedAtUtc is not null || rt.ExpiresAtUtc < DateTime.UtcNow)
         return Results.Json(new { error = "Invalid refresh token." }, statusCode: StatusCodes.Status401Unauthorized);
 
-    var user = await db.Users.FindAsync(rt.UserId); // Load user.
+    var user = await db.Users.FindAsync(rt.UserId);
     if (user is null)
         return Results.Json(new { error = "Invalid refresh token." }, statusCode: StatusCodes.Status401Unauthorized);
 
-    rt.RevokedAtUtc = DateTime.UtcNow; // Revoke old token.
+    rt.RevokedAtUtc = DateTime.UtcNow;
 
-    var newRefreshRaw = GenerateRefreshToken(); // Generate replacement token.
+    var newRefreshRaw = GenerateRefreshToken();
     db.RefreshTokens.Add(new RefreshToken
     {
         UserId = user.Id,
@@ -374,20 +353,19 @@ app.MapPost("/refresh", async (AppDbContext db, HttpRequest request, HttpRespons
         ExpiresAtUtc = DateTime.UtcNow.AddDays(refreshDays)
     });
 
-    await db.SaveChangesAsync(); // Save rotated token.
-    SetRefreshCookie(response, newRefreshRaw); // Set new cookie.
+    await db.SaveChangesAsync();
+    SetRefreshCookie(response, newRefreshRaw);
 
-    var newCsrfToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)); // Generate new CSRF token.
-    SetCsrfCookie(response, newCsrfToken); // Replace CSRF cookie.
+    var newCsrfToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+    SetCsrfCookie(response, newCsrfToken);
 
     return Results.Ok(new
     {
-        accessToken = IssueAccessToken(user), // Return new access token.
-        csrfToken = newCsrfToken // Return new CSRF token.
+        accessToken = IssueAccessToken(user),
+        csrfToken = newCsrfToken
     });
 });
 
-// Logout endpoint.
 app.MapPost("/logout", async (AppDbContext db, HttpRequest request, HttpResponse response) =>
 {
     if (!ValidateCsrf(request))
@@ -395,36 +373,34 @@ app.MapPost("/logout", async (AppDbContext db, HttpRequest request, HttpResponse
 
     if (request.Cookies.TryGetValue("refresh_token", out var refreshRaw) && !string.IsNullOrWhiteSpace(refreshRaw))
     {
-        var tokenHash = HashToken(refreshRaw); // Hash token.
-        var rt = await db.RefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == tokenHash); // Find token.
+        var tokenHash = HashToken(refreshRaw);
+        var rt = await db.RefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
         if (rt is not null && rt.RevokedAtUtc is null)
         {
-            rt.RevokedAtUtc = DateTime.UtcNow; // Revoke token.
-            await db.SaveChangesAsync(); // Save revocation.
+            rt.RevokedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync();
         }
     }
 
-    response.Cookies.Delete("refresh_token"); // Delete refresh cookie.
-    response.Cookies.Delete("csrf_token"); // Delete csrf cookie.
-    return Results.Ok(new { ok = true }); // Return success.
+    response.Cookies.Delete("refresh_token");
+    response.Cookies.Delete("csrf_token");
+    return Results.Ok(new { ok = true });
 });
 
-// Current authenticated user endpoint.
 app.MapGet("/me", (ClaimsPrincipal user) =>
 {
-    var sub = GetClaim(user, JwtRegisteredClaimNames.Sub, "sub", ClaimTypes.NameIdentifier); // Resolve user id claim.
-    var email = GetClaim(user, JwtRegisteredClaimNames.Email, "email", ClaimTypes.Email); // Resolve email claim.
-    var role = GetClaim(user, "role", ClaimTypes.Role); // Resolve role claim.
+    var sub = GetClaim(user, JwtRegisteredClaimNames.Sub, "sub", ClaimTypes.NameIdentifier);
+    var email = GetClaim(user, JwtRegisteredClaimNames.Email, "email", ClaimTypes.Email);
+    var role = GetClaim(user, "role", ClaimTypes.Role);
 
-    return Results.Ok(new { sub, email, role }); // Return clean identity response.
+    return Results.Ok(new { sub, email, role });
 }).RequireAuthorization();
 
-// JWKS endpoint for other services to validate auth tokens.
 app.MapGet("/.well-known/jwks.json", () =>
 {
-    var parameters = rsaPublic.ExportParameters(false); // Export public RSA parameters.
-    var e = Base64UrlEncoder.Encode(parameters.Exponent!); // Public exponent.
-    var n = Base64UrlEncoder.Encode(parameters.Modulus!); // Public modulus.
+    var parameters = rsaPublic.ExportParameters(false);
+    var e = Base64UrlEncoder.Encode(parameters.Exponent!);
+    var n = Base64UrlEncoder.Encode(parameters.Modulus!);
 
     return Results.Json(new
     {
@@ -443,4 +419,4 @@ app.MapGet("/.well-known/jwks.json", () =>
     });
 });
 
-app.Run(); // Start app.
+app.Run();

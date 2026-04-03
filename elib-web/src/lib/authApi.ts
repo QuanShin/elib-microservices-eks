@@ -1,15 +1,27 @@
 export type LoginResponse = {
   accessToken: string;
-  expiresIn: number;
   csrfToken: string;
+  user: {
+    id: number;
+    email: string;
+    role: string;
+  };
 };
 
-export type MeResponse = { sub: string; email: string; role: string };
+export type MeResponse = {
+  sub: string;
+  email: string;
+  role: string;
+};
 
 let accessToken: string | null = null;
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-const AUTH_BASE = `${API_BASE}`;
+// Use same-origin nginx/Vite proxy.
+// In production this becomes:
+//   https://app.elibapp.io.vn/api/auth
+// and nginx forwards it to AuthService.
+// In local dev, Vite proxy forwards it too.
+const AUTH_BASE = "/api/auth";
 
 function getCsrfFromCookie() {
   const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
@@ -33,16 +45,24 @@ async function safeError(res: Response) {
   }
 }
 
-async function request(path: string, init: RequestInit = {}, opts?: { useCsrf?: boolean }) {
+async function request(
+  path: string,
+  init: RequestInit = {},
+  opts?: { useCsrf?: boolean }
+) {
   const headers: Record<string, string> = {
     ...((init.headers as Record<string, string>) ?? {})
   };
 
-  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
 
   if (opts?.useCsrf) {
     const csrf = getCsrfFromCookie();
-    if (csrf) headers["X-CSRF"] = csrf;
+    if (csrf) {
+      headers["X-CSRF"] = csrf;
+    }
   }
 
   return fetch(`${AUTH_BASE}${path}`, {
@@ -58,7 +78,11 @@ export async function register(email: string, password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, role: "MEMBER" })
   });
-  if (!res.ok) throw new Error(await safeError(res));
+
+  if (!res.ok) {
+    throw new Error(await safeError(res));
+  }
+
   return res.json();
 }
 
@@ -68,7 +92,10 @@ export async function login(email: string, password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password })
   });
-  if (!res.ok) throw new Error(await safeError(res));
+
+  if (!res.ok) {
+    throw new Error(await safeError(res));
+  }
 
   const data = (await res.json()) as LoginResponse;
   accessToken = data.accessToken;
@@ -77,26 +104,51 @@ export async function login(email: string, password: string) {
 
 export async function checkMeNoRefresh(): Promise<MeResponse> {
   const res = await request("/me");
-  if (!res.ok) throw new Error(await safeError(res));
+
+  if (!res.ok) {
+    throw new Error(await safeError(res));
+  }
+
   return res.json();
 }
 
 export async function renewSession() {
-  const res = await request("/refresh", { method: "POST" }, { useCsrf: true });
-  if (!res.ok) throw new Error(await safeError(res));
+  const res = await request(
+    "/refresh",
+    { method: "POST" },
+    { useCsrf: true }
+  );
+
+  if (!res.ok) {
+    throw new Error(await safeError(res));
+  }
+
   const data = await res.json();
   accessToken = data.accessToken;
   return data;
 }
 
 export async function logout() {
-  const res = await request("/logout", { method: "POST" }, { useCsrf: true });
+  const res = await request(
+    "/logout",
+    { method: "POST" },
+    { useCsrf: true }
+  );
+
   clearSession();
-  if (!res.ok) throw new Error(await safeError(res));
+
+  if (!res.ok) {
+    throw new Error(await safeError(res));
+  }
+
   return res.json();
 }
 
-export async function authFetch(path: string, init: RequestInit = {}, opts?: { useCsrf?: boolean }) {
+export async function authFetch(
+  path: string,
+  init: RequestInit = {},
+  opts?: { useCsrf?: boolean }
+) {
   let res = await request(path, init, opts);
 
   if (res.status === 401) {

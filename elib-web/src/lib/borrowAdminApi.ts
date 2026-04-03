@@ -6,8 +6,9 @@ export type BorrowSummary = {
   returned: number;
 };
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-const BORROW_BASE = `${API_BASE}/borrow`;
+// Use same-origin proxy through nginx/Vite.
+// This avoids browser CORS/preflight issues.
+const BORROW_BASE = "/api/borrow";
 
 async function httpError(res: Response) {
   const text = await res.text().catch(() => "");
@@ -19,6 +20,9 @@ export async function adminSummary(): Promise<BorrowSummary> {
     method: "GET"
   });
 
-  if (!res.ok) throw new Error(await httpError(res));
+  if (!res.ok) {
+    throw new Error(await httpError(res));
+  }
+
   return res.json();
 }
