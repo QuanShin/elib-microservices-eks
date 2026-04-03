@@ -123,21 +123,45 @@ export default function MyLoans({
         return;
       }
 
-      const entries = await Promise.all(
+      const settled = await Promise.allSettled(
         ids.map(async (bid) => {
-          try {
-            const b = await getBook(bid);
-            return [bid, b] as const;
-          } catch {
-            setMetaErr((prev) => prev ?? "Cannot load some book metadata from CatalogService.");
-            return [bid, null] as const;
-          }
+          const b = await getBook(bid);
+          return [bid, b] as const;
         })
       );
 
-      setBookMap(Object.fromEntries(entries));
+      const nextBookMap: Record<number, Book | null> = {};
+      const missingIds: number[] = [];
+
+      for (let i = 0; i < settled.length; i += 1) {
+        const bid = ids[i];
+        const result = settled[i];
+
+        if (result.status === "fulfilled") {
+          const [, book] = result.value;
+          nextBookMap[bid] = book;
+        } else {
+          nextBookMap[bid] = null;
+          missingIds.push(bid);
+        }
+      }
+
+      setBookMap(nextBookMap);
+
+      if (missingIds.length > 0) {
+        const hasMissingActiveLoan = data.some(
+          (loan) => !loan.returnedAtUtc && missingIds.includes(loan.bookId)
+        );
+
+        if (hasMissingActiveLoan) {
+          setMetaErr("Some active loan book details could not be loaded from CatalogService.");
+        } else {
+          setMetaErr(null);
+        }
+      }
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load loans");
+      setBookMap({});
     } finally {
       setBusy(false);
     }
@@ -152,6 +176,7 @@ export default function MyLoans({
     setErr(null);
     setMetaErr(null);
     setOk(null);
+
     try {
       await checkoutBook(testBookId);
       await load();
@@ -169,6 +194,7 @@ export default function MyLoans({
     setErr(null);
     setMetaErr(null);
     setOk(null);
+
     try {
       await returnBook(loanId);
       await load();

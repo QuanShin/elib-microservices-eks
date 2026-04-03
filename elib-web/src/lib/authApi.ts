@@ -16,11 +16,6 @@ export type MeResponse = {
 
 let accessToken: string | null = null;
 
-// Use same-origin nginx/Vite proxy.
-// In production this becomes:
-//   https://app.elibapp.io.vn/api/auth
-// and nginx forwards it to AuthService.
-// In local dev, Vite proxy forwards it too.
 const AUTH_BASE = "/api/auth";
 
 function getCsrfFromCookie() {
@@ -39,8 +34,14 @@ export function clearSession() {
 async function safeError(res: Response) {
   try {
     const data = await res.json();
+    if (res.status === 401) return "Invalid email or password.";
+    if (res.status === 403) return data.error || data.message || "Access denied.";
+    if (res.status === 404) return data.error || data.message || "Requested resource was not found.";
     return data.error || data.message || `HTTP ${res.status}`;
   } catch {
+    if (res.status === 401) return "Invalid email or password.";
+    if (res.status === 403) return "Access denied.";
+    if (res.status === 404) return "Requested resource was not found.";
     return `HTTP ${res.status}`;
   }
 }
@@ -55,7 +56,7 @@ async function request(
   };
 
   if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   if (opts?.useCsrf) {
