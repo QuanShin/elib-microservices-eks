@@ -6,24 +6,6 @@ type Props = {
   onSelect: (id: number) => void;
 };
 
-function coverStyle(seed: string) {
-  const palettes = [
-    ["#60a5fa", "#2563eb"],
-    ["#f59e0b", "#ef4444"],
-    ["#34d399", "#059669"],
-    ["#a78bfa", "#7c3aed"],
-    ["#f472b6", "#db2777"],
-    ["#22d3ee", "#0891b2"]
-  ];
-
-  let h = 0;
-  for (let i = 0; i < seed.length; i += 1) h = seed.charCodeAt(i) + ((h << 5) - h);
-  const pair = palettes[Math.abs(h) % palettes.length];
-
-  return {
-    background: `linear-gradient(160deg, ${pair[0]}, ${pair[1]})`
-  };
-}
 
 export default function Catalog({ onSelect }: Props) {
   const [books, setBooks] = useState<BookListItem[]>([]);
