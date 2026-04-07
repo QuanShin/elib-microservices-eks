@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { myLoans, returnBook, checkoutBook, type Loan } from "../lib/borrowApi";
 import { getBook, type Book } from "../lib/catalogApi";
+import BookCover from "../components/BookCover";
 
 function fmt(dt?: string | null) {
   if (!dt) return "";
@@ -34,58 +35,6 @@ function coverStyle(seed: string) {
   return {
     background: `linear-gradient(160deg, ${pair[0]}, ${pair[1]})`
   };
-}
-
-function BookCover({ title, category, seed }: { title: string; category: string; seed: string }) {
-  return (
-    <div
-      className="bookThumb"
-      style={coverStyle(seed)}
-      aria-label={`${title} cover`}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: 10,
-          color: "white"
-        }}
-      >
-        <div
-          style={{
-            alignSelf: "flex-start",
-            padding: "4px 8px",
-            borderRadius: 999,
-            background: "rgba(255,255,255,.16)",
-            border: "1px solid rgba(255,255,255,.18)",
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: ".04em",
-            textTransform: "uppercase",
-            backdropFilter: "blur(4px)"
-          }}
-        >
-          {category}
-        </div>
-
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 900,
-            lineHeight: 1.05,
-            letterSpacing: "-.02em",
-            textShadow: "0 6px 18px rgba(0,0,0,.22)",
-            wordBreak: "break-word"
-          }}
-        >
-          {title}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function MyLoans({
@@ -229,7 +178,7 @@ export default function MyLoans({
           <BookCover
             title={title}
             category={category}
-            seed={`${title}-${l.bookId}`}
+            className="bookThumb"
           />
 
           <div className="bookDetailsBody">

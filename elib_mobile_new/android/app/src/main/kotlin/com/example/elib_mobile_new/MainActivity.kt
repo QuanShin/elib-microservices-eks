@@ -1,4 +1,4 @@
-package com.example.elib_mobile_new
+package vn.io.elib.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 

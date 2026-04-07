@@ -27,24 +27,24 @@ export default defineConfig({
 
   server: {
     proxy: {
-      // AuthService
       "/api/auth": {
-        target: "http://localhost:5000",
+        target: "https://api.elibapp.io.vn",
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api\/auth/, "")
       },
 
-      // CatalogService
       "/api/catalog": {
-        target: "http://localhost:5001",
+        target: "https://api.elibapp.io.vn",
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api\/catalog/, "")
       },
 
-      // BorrowService
       "/api/borrow": {
-        target: "http://localhost:5002",
+        target: "https://api.elibapp.io.vn",
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api\/borrow/, "")
       }
     }

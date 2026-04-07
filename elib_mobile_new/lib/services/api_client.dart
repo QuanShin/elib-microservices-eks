@@ -9,7 +9,7 @@ class ApiClient {
 
   static final ApiClient instance = ApiClient._internal();
 
-  final storage = const FlutterSecureStorage();
+  final FlutterSecureStorage storage = const FlutterSecureStorage();
 
   final CookieJar authCookieJar = CookieJar();
   final CookieJar catalogCookieJar = CookieJar();
@@ -26,7 +26,11 @@ class ApiClient {
     );
 
     dio.interceptors.add(CookieManager(authCookieJar));
-    dio.interceptors.add(_authInterceptor(dio));
+    dio.interceptors.add(_serviceInterceptor(
+      dio: dio,
+      cookieJar: authCookieJar,
+      allowRefresh: true,
+    ));
     return dio;
   }
 
@@ -41,7 +45,11 @@ class ApiClient {
     );
 
     dio.interceptors.add(CookieManager(catalogCookieJar));
-    dio.interceptors.add(_bearerInterceptor());
+    dio.interceptors.add(_serviceInterceptor(
+      dio: dio,
+      cookieJar: catalogCookieJar,
+      allowRefresh: true,
+    ));
     return dio;
   }
 
@@ -56,23 +64,19 @@ class ApiClient {
     );
 
     dio.interceptors.add(CookieManager(borrowCookieJar));
-    dio.interceptors.add(_bearerInterceptor());
+    dio.interceptors.add(_serviceInterceptor(
+      dio: dio,
+      cookieJar: borrowCookieJar,
+      allowRefresh: true,
+    ));
     return dio;
   }
 
-  InterceptorsWrapper _bearerInterceptor() {
-    return InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await storage.read(key: 'accessToken');
-        if (token != null && token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        handler.next(options);
-      },
-    );
-  }
-
-  InterceptorsWrapper _authInterceptor(Dio authDio) {
+  InterceptorsWrapper _serviceInterceptor({
+    required Dio dio,
+    required CookieJar cookieJar,
+    required bool allowRefresh,
+  }) {
     return InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await storage.read(key: 'accessToken');
@@ -85,16 +89,24 @@ class ApiClient {
         final status = error.response?.statusCode;
         final path = error.requestOptions.path;
 
-        if (status == 401 && path != '/refresh' && path != '/login') {
-          final refreshed = await tryRefresh(authDio);
+        final isAuthLogin = path == '/login';
+        final isAuthRefresh = path == '/refresh';
+
+        if (allowRefresh && status == 401 && !isAuthLogin && !isAuthRefresh) {
+          final refreshed = await tryRefresh();
+
           if (refreshed) {
-            final retryOptions = error.requestOptions;
-            final token = await storage.read(key: 'accessToken');
-            if (token != null && token.isNotEmpty) {
-              retryOptions.headers['Authorization'] = 'Bearer $token';
-            }
-            final response = await authDio.fetch(retryOptions);
-            return handler.resolve(response);
+            try {
+              final retryOptions = error.requestOptions;
+              final token = await storage.read(key: 'accessToken');
+
+              if (token != null && token.isNotEmpty) {
+                retryOptions.headers['Authorization'] = 'Bearer $token';
+              }
+
+              final response = await dio.fetch(retryOptions);
+              return handler.resolve(response);
+            } catch (_) {}
           }
         }
 
@@ -103,9 +115,22 @@ class ApiClient {
     );
   }
 
-  Future<bool> tryRefresh(Dio authDio) async {
+  Future<bool> tryRefresh() async {
+    final authDio = Dio(
+      BaseOptions(
+        baseUrl: ApiConfig.authBaseUrl,
+        connectTimeout: const Duration(seconds: 45),
+        receiveTimeout: const Duration(seconds: 45),
+        headers: {'Content-Type': 'application/json'},
+      ),
+    );
+
+    authDio.interceptors.add(CookieManager(authCookieJar));
+
     try {
-      final cookies = await authCookieJar.loadForRequest(Uri.parse(ApiConfig.authBaseUrl));
+      final cookies = await authCookieJar.loadForRequest(
+        Uri.parse(ApiConfig.authBaseUrl),
+      );
 
       String? csrf;
       for (final c in cookies) {
@@ -123,13 +148,23 @@ class ApiClient {
       );
 
       final token = response.data['accessToken']?.toString();
-      if (token == null || token.isEmpty) return false;
+      if (token == null || token.isEmpty) {
+        return false;
+      }
 
       await storage.write(key: 'accessToken', value: token);
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  Future<void> saveAccessToken(String token) async {
+    await storage.write(key: 'accessToken', value: token);
+  }
+
+  Future<String?> readAccessToken() async {
+    return storage.read(key: 'accessToken');
   }
 
   Future<void> clearSession() async {

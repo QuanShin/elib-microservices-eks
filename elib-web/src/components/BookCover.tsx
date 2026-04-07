@@ -1,4 +1,4 @@
-import { categoryEmoji, coverGradient, coverLabel } from "../utils/bookVisuals";
+import { coverGradient } from "../utils/bookVisuals";
 
 export default function BookCover({
   title,
@@ -13,10 +13,11 @@ export default function BookCover({
     <div
       className={`book-cover ${className}`.trim()}
       style={{ backgroundImage: coverGradient(`${title}-${category}`) }}
+      aria-label={`${title} cover`}
     >
-      <div className="book-cover__emoji">{categoryEmoji(category)}</div>
-      <div className="book-cover__title">{coverLabel(title)}</div>
+      <div className="book-cover__shine" />
       <div className="book-cover__spine" />
+      <div className="book-cover__icon">📘</div>
     </div>
   );
 }

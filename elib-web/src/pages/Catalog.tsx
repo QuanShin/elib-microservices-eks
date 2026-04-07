@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { listBooks, type BookListItem } from "../lib/catalogApi";
+import BookCover from "../components/BookCover";
 
 type Props = {
   onSelect: (id: number) => void;
@@ -22,58 +23,6 @@ function coverStyle(seed: string) {
   return {
     background: `linear-gradient(160deg, ${pair[0]}, ${pair[1]})`
   };
-}
-
-function BookCover({ title, category }: { title: string; category: string }) {
-  return (
-    <div
-      className="bookThumb"
-      style={coverStyle(`${title}-${category}`)}
-      aria-label={`${title} cover`}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: 10,
-          color: "white"
-        }}
-      >
-        <div
-          style={{
-            alignSelf: "flex-start",
-            padding: "4px 8px",
-            borderRadius: 999,
-            background: "rgba(255,255,255,.16)",
-            border: "1px solid rgba(255,255,255,.18)",
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: ".04em",
-            textTransform: "uppercase",
-            backdropFilter: "blur(4px)"
-          }}
-        >
-          {category}
-        </div>
-
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 900,
-            lineHeight: 1.05,
-            letterSpacing: "-.02em",
-            textShadow: "0 6px 18px rgba(0,0,0,.22)",
-            wordBreak: "break-word"
-          }}
-        >
-          {title}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function Catalog({ onSelect }: Props) {
@@ -210,7 +159,7 @@ export default function Catalog({ onSelect }: Props) {
             type="button"
           >
             <div className="bookCardRow">
-              <BookCover title={b.title} category={b.category} />
+              <BookCover title={b.title} category={b.category} className="bookThumb" />
 
               <div style={{ minWidth: 0 }}>
                 <div className="bookTitle">{b.title}</div>

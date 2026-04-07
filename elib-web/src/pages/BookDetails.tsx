@@ -112,6 +112,23 @@ export default function BookDetails({
     description: ""
   });
 
+  const samplePages = [
+  `Chapter 1
+
+  The library was quieter than usual that afternoon. Sunlight slipped through the tall windows and stretched across the reading tables in soft bands. A single book lay open in the center, waiting for its next reader.`,
+
+    `Chapter 2
+
+  Mina turned the page carefully. The paper felt warm under her hand, and the printed words seemed to pull her deeper into the story. Outside, the city moved quickly. Inside, time slowed down.`,
+
+    `Chapter 3
+
+  She liked that a library could hold thousands of voices and still feel peaceful. Every shelf promised another direction, another perspective, another world waiting just one page away.`
+  ];
+
+  const [readerOpen, setReaderOpen] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [readerLarge, setReaderLarge] = useState(false);
   const isAdmin = role === "ADMIN";
 
   const activeLoanForThisBook = useMemo(() => {
@@ -321,7 +338,68 @@ export default function BookDetails({
                 </>
               )}
             </div>
+            <div className="bookReader">
+              <div className="bookReaderTop">
+                <div>
+                  <div className="bookReaderTitle">Read sample</div>
+                  <div className="sectionSubtitle">Preview a few sample pages and basic reading controls.</div>
+                </div>
 
+                <div className="bookReaderTools">
+                  <button
+                    className="readerTool"
+                    onClick={() => setReaderOpen((v) => !v)}
+                    type="button"
+                  >
+                    {readerOpen ? "Hide reader" : "Open reader"}
+                  </button>
+
+                  <button
+                    className="readerTool"
+                    onClick={() => setReaderLarge((v) => !v)}
+                    type="button"
+                  >
+                    {readerLarge ? "Normal text" : "Larger text"}
+                  </button>
+                </div>
+              </div>
+
+              {readerOpen && (
+                <>
+                  <div className="readerPages">
+                    <div className="readerPage">
+                      <div className="readerPageNum">Page {pageIndex + 1}</div>
+                      <div
+                        className="readerPageText"
+                        style={{ fontSize: readerLarge ? 17 : 15 }}
+                      >
+                        {samplePages[pageIndex]}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="readerNav">
+                    <button
+                      className="btn secondary"
+                      onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                      disabled={pageIndex === 0}
+                      type="button"
+                    >
+                      Previous
+                    </button>
+
+                    <button
+                      className="btn secondary"
+                      onClick={() => setPageIndex((p) => Math.min(samplePages.length - 1, p + 1))}
+                      disabled={pageIndex === samplePages.length - 1}
+                      type="button"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <div className="bookActionRow">
               {!activeLoanForThisBook ? (
                 <button className="btn primary" onClick={onBorrow} disabled={busy || loanBusy} type="button">

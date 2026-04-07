@@ -18,3 +18,8 @@ Dockerfile.*.local
 *.pem
 elib-chart/values-secret.yaml
 **/values-secret.yaml
+*.zip
+elib-web/dev-dist/
+node_modules/
+dist/
+build/
