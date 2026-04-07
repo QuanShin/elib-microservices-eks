@@ -1160,6 +1160,334 @@ input:focus, select:focus, textarea:focus{
   padding: 0 18px 18px;
 }
 
+.modernDetailsShell{
+  display: grid;
+  gap: 18px;
+}
+
+.modernDetailsCard{
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.modernDetailsCoverWrap{
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.modernDetailsBody{
+  display: grid;
+  gap: 16px;
+}
+
+.eyebrowTag{
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59,130,246,.08);
+  color: #255fcd;
+  border: 1px solid rgba(59,130,246,.14);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.modernBookTitle{
+  max-width: 900px;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: .98;
+  margin: 8px 0 0;
+  letter-spacing: -.04em;
+}
+
+.bookAuthorLine{
+  color: var(--txt-soft);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.modernMetaRow{
+  margin-top: 12px;
+}
+
+.modernOverviewCard{
+  display: grid;
+  gap: 10px;
+}
+
+.sectionKicker{
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.modernBookDesc{
+  margin-top: 0;
+  font-size: 15px;
+  line-height: 1.9;
+  color: #60718d;
+}
+
+.modernInfoGrid{
+  margin-top: 0;
+}
+
+.modernLoanCard{
+  margin-top: 0;
+}
+
+.modernReader{
+  margin-top: 0;
+}
+
+.modernActionRow{
+  margin-top: 0;
+}
+
+.analyticsShell{
+  display: grid;
+  gap: 18px;
+}
+
+.analyticsHero{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.analyticsInsightCard{
+  border-radius: 20px;
+  padding: 18px;
+  background: linear-gradient(145deg, rgba(38,99,235,.95), rgba(99,102,241,.92));
+  color: white;
+  box-shadow: 0 18px 36px rgba(59,130,246,.18);
+}
+
+.analyticsInsightTitle{
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .86;
+  margin-bottom: 10px;
+}
+
+.analyticsInsightText{
+  line-height: 1.75;
+  font-size: 14px;
+}
+
+.analyticsKpiGrid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.analyticsKpiCard{
+  background: white;
+  border: 1px solid rgba(151,174,214,.16);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 10px 25px rgba(15,23,42,.04);
+}
+
+.analyticsKpiValue{
+  font-size: clamp(2rem, 3vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: -.04em;
+  color: var(--txt);
+  margin-top: 8px;
+}
+
+.analyticsKpiSub{
+  color: var(--txt-soft);
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.analyticsGrid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.analyticsPanel{
+  min-height: 100%;
+}
+
+.analyticsBars{
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  margin-top: 22px;
+  min-height: 220px;
+}
+
+.analyticsBarCol{
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  flex: 1;
+}
+
+.analyticsBarValue{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.analyticsBarTrack{
+  width: 100%;
+  max-width: 46px;
+  height: 170px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(59,130,246,.08), rgba(99,102,241,.04));
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: end;
+}
+
+.analyticsBarFill{
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #60a5fa, #6366f1);
+}
+
+.analyticsBarLabel{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--txt);
+}
+
+.analyticsList{
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.analyticsListRow{
+  display: grid;
+  gap: 8px;
+}
+
+.analyticsListTop{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--txt);
+}
+
+.analyticsLineTrack{
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(99,102,241,.08);
+  overflow: hidden;
+}
+
+.analyticsLineFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #8b5cf6);
+}
+
+.analyticsLineTrack.softBlue{
+  background: rgba(59,130,246,.1);
+}
+
+.analyticsLineTrack.softGreen{
+  background: rgba(16,185,129,.12);
+}
+
+.analyticsLineFill.analyticsBlue{
+  background: linear-gradient(90deg, #60a5fa, #8b5cf6);
+}
+
+.analyticsLineFill.analyticsGreen{
+  background: linear-gradient(90deg, #34d399, #10b981);
+}
+
+.analyticsTopCategory{
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(248,251,255,.92);
+  border: 1px solid rgba(151,174,214,.16);
+}
+
+.analyticsTopCategoryValue{
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--txt);
+}
+
+.analyticsRecoList{
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.analyticsRecoItem{
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(248,251,255,.92);
+  border: 1px solid rgba(151,174,214,.16);
+}
+
+.analyticsRecoBadge{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: #255fcd;
+  background: rgba(59,130,246,.1);
+}
+
+.analyticsRecoTitle{
+  font-weight: 800;
+  color: var(--txt);
+  margin-bottom: 4px;
+}
+
+.analyticsRecoText{
+  color: var(--txt-soft);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+@media (max-width: 1100px){
+  .analyticsHero,
+  .analyticsGrid,
+  .analyticsKpiGrid{
+    grid-template-columns: 1fr;
+  }
+
+  .modernDetailsCard{
+    grid-template-columns: 1fr;
+  }
+
+  .modernDetailsCoverWrap{
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 920px){
   .bookDetailsCard{
     grid-template-columns: 1fr;

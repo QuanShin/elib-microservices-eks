@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getBook, updateBook, deleteBook, type Book, type BookCreate } from "../lib/catalogApi";
 import { checkoutBook, returnBook, myLoans, type Loan } from "../lib/borrowApi";
+import BookCover from "../components/BookCover";
 
 function fmt(dt?: string | null) {
   if (!dt) return "";
@@ -9,77 +10,6 @@ function fmt(dt?: string | null) {
   } catch {
     return dt;
   }
-}
-
-function coverStyle(seed: string) {
-  const palettes = [
-    ["#60a5fa", "#2563eb"],
-    ["#f59e0b", "#ef4444"],
-    ["#34d399", "#059669"],
-    ["#a78bfa", "#7c3aed"],
-    ["#f472b6", "#db2777"],
-    ["#22d3ee", "#0891b2"]
-  ];
-
-  let h = 0;
-  for (let i = 0; i < seed.length; i += 1) h = seed.charCodeAt(i) + ((h << 5) - h);
-  const pair = palettes[Math.abs(h) % palettes.length];
-
-  return {
-    background: `linear-gradient(160deg, ${pair[0]}, ${pair[1]})`
-  };
-}
-
-function BookCover({ title, category }: { title: string; category: string }) {
-  return (
-    <div
-      className="bookDetailsCover"
-      style={coverStyle(`${title}-${category}`)}
-      aria-label={`${title} cover`}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: 16,
-          color: "white"
-        }}
-      >
-        <div
-          style={{
-            alignSelf: "flex-start",
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: "rgba(255,255,255,.16)",
-            border: "1px solid rgba(255,255,255,.18)",
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: ".04em",
-            textTransform: "uppercase",
-            backdropFilter: "blur(4px)"
-          }}
-        >
-          {category}
-        </div>
-
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 900,
-            lineHeight: 1.05,
-            letterSpacing: "-.02em",
-            textShadow: "0 6px 18px rgba(0,0,0,.24)",
-            wordBreak: "break-word"
-          }}
-        >
-          {title}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function BookDetails({
@@ -113,17 +43,17 @@ export default function BookDetails({
   });
 
   const samplePages = [
-  `Chapter 1
+    `Chapter 1
 
-  The library was quieter than usual that afternoon. Sunlight slipped through the tall windows and stretched across the reading tables in soft bands. A single book lay open in the center, waiting for its next reader.`,
+The library was quieter than usual that afternoon. Sunlight slipped through the tall windows and stretched across the reading tables in soft bands. A single book lay open in the center, waiting for its next reader.`,
 
     `Chapter 2
 
-  Mina turned the page carefully. The paper felt warm under her hand, and the printed words seemed to pull her deeper into the story. Outside, the city moved quickly. Inside, time slowed down.`,
+Mina turned the page carefully. The paper felt warm under her hand, and the printed words seemed to pull her deeper into the story. Outside, the city moved quickly. Inside, time slowed down.`,
 
     `Chapter 3
 
-  She liked that a library could hold thousands of voices and still feel peaceful. Every shelf promised another direction, another perspective, another world waiting just one page away.`
+She liked that a library could hold thousands of voices and still feel peaceful. Every shelf promised another direction, another perspective, another world waiting just one page away.`
   ];
 
   const [readerOpen, setReaderOpen] = useState(false);
@@ -175,6 +105,8 @@ export default function BookDetails({
     setEdit(false);
     setShowDelete(false);
     setLoans(null);
+    setReaderOpen(false);
+    setPageIndex(0);
     loadBook();
     loadLoans();
   }, [id]);
@@ -261,7 +193,7 @@ export default function BookDetails({
   }
 
   return (
-    <div className="bookDetailsShell">
+    <div className="bookDetailsShell modernDetailsShell">
       <div className="toolbar">
         <button className="btn secondary bookBackBar" onClick={onBack} type="button">
           ← Back
@@ -269,10 +201,22 @@ export default function BookDetails({
 
         {isAdmin && !edit && (
           <>
-            <button className="btn secondary" style={{ marginTop: 0 }} onClick={() => setEdit(true)} disabled={busy || loanBusy} type="button">
+            <button
+              className="btn secondary"
+              style={{ marginTop: 0 }}
+              onClick={() => setEdit(true)}
+              disabled={busy || loanBusy}
+              type="button"
+            >
               Edit
             </button>
-            <button className="btn danger" style={{ marginTop: 0 }} onClick={() => setShowDelete(true)} disabled={busy || loanBusy} type="button">
+            <button
+              className="btn danger"
+              style={{ marginTop: 0 }}
+              onClick={() => setShowDelete(true)}
+              disabled={busy || loanBusy}
+              type="button"
+            >
               Delete
             </button>
           </>
@@ -284,30 +228,34 @@ export default function BookDetails({
       {ok && <div className="msg ok">{ok}</div>}
 
       {book && !edit && (
-        <section className="bookDetailsCard">
-          <div className="bookDetailsCoverWrap">
-            <BookCover title={book.title} category={book.category} />
+        <section className="bookDetailsCard modernDetailsCard">
+          <div className="bookDetailsCoverWrap modernDetailsCoverWrap">
+            <BookCover title={book.title} category={book.category} className="bookDetailsCover" />
           </div>
 
-          <div className="bookDetailsBody">
-            <div className="bookDetailsHeader">
-              <h1 className="bookDetailsTitle">{book.title}</h1>
+          <div className="bookDetailsBody modernDetailsBody">
+            <div className="bookDetailsHeader modernDetailsHeader">
+              <div className="eyebrowTag">Featured Title</div>
+              <h1 className="bookDetailsTitle modernBookTitle">{book.title}</h1>
+              <div className="bookAuthorLine">{book.author}</div>
 
-              <div className="bookDetailsMeta">
-                <span className="metaTag">{book.author}</span>
+              <div className="bookDetailsMeta modernMetaRow">
                 <span className="metaTag">{book.category}</span>
                 <span className="metaTag">{book.year}</span>
                 {book.isbn ? <span className="metaTag">ISBN {book.isbn}</span> : null}
               </div>
             </div>
 
-            {book.description ? (
-              <div className="bookDetailsDesc">{book.description}</div>
-            ) : (
-              <div className="bookDetailsDesc">No description was provided for this title yet.</div>
-            )}
+            <div className="modernOverviewCard">
+              <div className="sectionKicker">Overview</div>
+              <div className="bookDetailsDesc modernBookDesc">
+                {book.description?.trim()
+                  ? book.description
+                  : "No description was provided for this title yet."}
+              </div>
+            </div>
 
-            <div className="bookInfoGrid">
+            <div className="bookInfoGrid modernInfoGrid">
               <div className="infoMiniCard">
                 <div className="infoMiniLabel">Author</div>
                 <div className="infoMiniValue">{book.author}</div>
@@ -324,7 +272,7 @@ export default function BookDetails({
               </div>
             </div>
 
-            <div className="loanStateCard">
+            <div className="loanStateCard modernLoanCard">
               {!activeLoanForThisBook ? (
                 <>
                   <div className="loanStateTitle">Available now</div>
@@ -338,27 +286,20 @@ export default function BookDetails({
                 </>
               )}
             </div>
-            <div className="bookReader">
+
+            <div className="bookReader modernReader">
               <div className="bookReaderTop">
                 <div>
                   <div className="bookReaderTitle">Read sample</div>
-                  <div className="sectionSubtitle">Preview a few sample pages and basic reading controls.</div>
+                  <div className="sectionSubtitle">Preview a few sample pages and use lightweight reading controls.</div>
                 </div>
 
                 <div className="bookReaderTools">
-                  <button
-                    className="readerTool"
-                    onClick={() => setReaderOpen((v) => !v)}
-                    type="button"
-                  >
+                  <button className="readerTool" onClick={() => setReaderOpen((v) => !v)} type="button">
                     {readerOpen ? "Hide reader" : "Open reader"}
                   </button>
 
-                  <button
-                    className="readerTool"
-                    onClick={() => setReaderLarge((v) => !v)}
-                    type="button"
-                  >
+                  <button className="readerTool" onClick={() => setReaderLarge((v) => !v)} type="button">
                     {readerLarge ? "Normal text" : "Larger text"}
                   </button>
                 </div>
@@ -369,10 +310,7 @@ export default function BookDetails({
                   <div className="readerPages">
                     <div className="readerPage">
                       <div className="readerPageNum">Page {pageIndex + 1}</div>
-                      <div
-                        className="readerPageText"
-                        style={{ fontSize: readerLarge ? 17 : 15 }}
-                      >
+                      <div className="readerPageText" style={{ fontSize: readerLarge ? 17 : 15 }}>
                         {samplePages[pageIndex]}
                       </div>
                     </div>
@@ -400,7 +338,8 @@ export default function BookDetails({
                 </>
               )}
             </div>
-            <div className="bookActionRow">
+
+            <div className="bookActionRow modernActionRow">
               {!activeLoanForThisBook ? (
                 <button className="btn primary" onClick={onBorrow} disabled={busy || loanBusy} type="button">
                   {loanBusy ? "Processing…" : "Borrow this book"}
