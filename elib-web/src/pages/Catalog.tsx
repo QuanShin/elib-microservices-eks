@@ -6,6 +6,7 @@ type Props = {
   onSelect: (id: number) => void;
 };
 
+type SortMode = "title" | "year-desc" | "year-asc";
 
 export default function Catalog({ onSelect }: Props) {
   const [books, setBooks] = useState<BookListItem[]>([]);
@@ -14,6 +15,7 @@ export default function Catalog({ onSelect }: Props) {
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("ALL");
+  const [sortBy, setSortBy] = useState<SortMode>("title");
 
   async function load() {
     setErr(null);
@@ -39,32 +41,35 @@ export default function Catalog({ onSelect }: Props) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return books.filter((b) => {
+
+    const result = books.filter((b) => {
       const matchQ =
         !q ||
         b.title.toLowerCase().includes(q) ||
-        b.author.toLowerCase().includes(q);
+        b.author.toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q);
 
       const matchC = category === "ALL" || b.category === category;
       return matchQ && matchC;
     });
-  }, [books, query, category]);
+
+    result.sort((a, b) => {
+      if (sortBy === "year-desc") return b.year - a.year;
+      if (sortBy === "year-asc") return a.year - b.year;
+      return a.title.localeCompare(b.title);
+    });
+
+    return result;
+  }, [books, query, category, sortBy]);
 
   return (
-    <div className="surfaceCard">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 12,
-          flexWrap: "wrap"
-        }}
-      >
+    <div className="surfaceCard catalogSurface premiumCatalog">
+      <div className="catalogHero">
         <div>
+          <div className="eyebrowTag">Curated Collection</div>
           <div className="sectionTitle">Discover Books</div>
           <div className="sectionSubtitle">
-            Browse the library collection, filter by category, and open any title for full details.
+            Explore a premium digital collection with elegant search, genre discovery, and detailed reading previews.
           </div>
         </div>
 
@@ -79,11 +84,11 @@ export default function Catalog({ onSelect }: Props) {
         </button>
       </div>
 
-      <div className="grid2" style={{ marginTop: 16 }}>
-        <div>
+      <div className="catalogFilters">
+        <div className="catalogSearchWrap">
           <label>Search</label>
           <input
-            placeholder="Search by title or author…"
+            placeholder="Search by title, author, or genre…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -99,23 +104,23 @@ export default function Catalog({ onSelect }: Props) {
             ))}
           </select>
         </div>
+
+        <div>
+          <label>Sort by</label>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortMode)}>
+            <option value="title">Title</option>
+            <option value="year-desc">Newest</option>
+            <option value="year-asc">Oldest</option>
+          </select>
+        </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          marginTop: 14,
-          flexWrap: "wrap"
-        }}
-      >
+      <div className="catalogToolbar">
         <div className="muted small">
           {busy ? "Loading library…" : `${filtered.length} result${filtered.length === 1 ? "" : "s"} found`}
         </div>
 
-        {(query || category !== "ALL") && (
+        {(query || category !== "ALL" || sortBy !== "title") && (
           <button
             className="btn secondary"
             style={{ marginTop: 0, width: "auto", padding: "8px 12px" }}
@@ -123,6 +128,7 @@ export default function Catalog({ onSelect }: Props) {
             onClick={() => {
               setQuery("");
               setCategory("ALL");
+              setSortBy("title");
             }}
           >
             Clear filters
@@ -132,24 +138,40 @@ export default function Catalog({ onSelect }: Props) {
 
       {err && <div className="msg error">{err}</div>}
 
-      <div className="catalogGrid" style={{ marginTop: 16 }}>
-        {filtered.map((b) => (
+      <div className="catalogGrid premiumCatalogGrid">
+        {filtered.map((b: any) => (
           <button
             key={b.id}
-            className="bookCard"
+            className="bookCard premiumBookCard"
             onClick={() => onSelect(b.id)}
             type="button"
           >
-            <div className="bookCardRow">
-              <BookCover title={b.title} category={b.category} className="bookThumb" />
+            <div className="premiumBookRow">
+              <BookCover
+                title={b.title}
+                category={b.category}
+                className="bookThumb premiumThumb"
+                coverImageUrl={b.coverImageUrl}
+              />
 
-              <div style={{ minWidth: 0 }}>
-                <div className="bookTitle">{b.title}</div>
-                <div className="muted small">{b.author}</div>
+              <div className="premiumBookBody">
+                <div className="premiumBookTop">
+                  <div className="bookTitle premiumBookTitle">{b.title}</div>
+                  <div className="muted small premiumAuthor">{b.author}</div>
+                </div>
 
-                <div className="bookDetailsMeta" style={{ marginTop: 10 }}>
+                <div className="bookDetailsMeta premiumMetaRow">
                   <span className="metaTag">{b.category}</span>
                   <span className="metaTag">{b.year}</span>
+                </div>
+
+                <div className="premiumBookSnippet">
+                  {(b.description?.trim() || "Open this book to explore details, reading preview, and related recommendations.").slice(0, 140)}
+                  {(b.description?.trim()?.length ?? 0) > 140 ? "…" : ""}
+                </div>
+
+                <div className="premiumBookFooter">
+                  <span className="catalogActionHint">View details</span>
                 </div>
               </div>
             </div>
@@ -158,19 +180,12 @@ export default function Catalog({ onSelect }: Props) {
       </div>
 
       {!busy && filtered.length === 0 && (
-        <div
-          className="surfaceCard"
-          style={{
-            marginTop: 16,
-            textAlign: "center",
-            background: "rgba(255,255,255,.68)"
-          }}
-        >
+        <div className="surfaceCard emptyStateCard" style={{ marginTop: 16 }}>
           <div className="sectionTitle" style={{ fontSize: "1rem" }}>
             No matches found
           </div>
           <div className="sectionSubtitle">
-            Try a different title, author, or category filter.
+            Try another title, author, category, or sorting option.
           </div>
         </div>
       )}

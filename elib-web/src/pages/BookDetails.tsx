@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getBook, updateBook, deleteBook, type Book, type BookCreate } from "../lib/catalogApi";
+import { getBook, updateBook, deleteBook, listBooks, type Book, type BookCreate } from "../lib/catalogApi";
 import { checkoutBook, returnBook, myLoans, type Loan } from "../lib/borrowApi";
 import BookCover from "../components/BookCover";
 
@@ -24,6 +24,7 @@ export default function BookDetails({
   onChanged: () => void;
 }) {
   const [book, setBook] = useState<Book | null>(null);
+  const [allBooks, setAllBooks] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -39,8 +40,9 @@ export default function BookDetails({
     category: "",
     year: new Date().getFullYear(),
     isbn: "",
-    description: ""
-  });
+    description: "",
+    coverImageUrl: ""
+  } as any);
 
   const samplePages = [
     `Chapter 1
@@ -66,11 +68,23 @@ She liked that a library could hold thousands of voices and still feel peaceful.
     return loans.find((l) => l.bookId === id && !l.returnedAtUtc) ?? null;
   }, [loans, id]);
 
+  const relatedBooks = useMemo(() => {
+    if (!book) return [];
+    return allBooks
+      .filter((b) => b.id !== book.id)
+      .filter(
+        (b) =>
+          b.category === book.category ||
+          b.author.toLowerCase() === book.author.toLowerCase()
+      )
+      .slice(0, 4);
+  }, [allBooks, book]);
+
   async function loadBook() {
     setBusy(true);
     setErr(null);
     try {
-      const b = await getBook(id);
+      const b: any = await getBook(id);
       setBook(b);
       setForm({
         title: b.title,
@@ -78,7 +92,8 @@ She liked that a library could hold thousands of voices and still feel peaceful.
         category: b.category,
         year: b.year,
         isbn: b.isbn ?? "",
-        description: b.description ?? ""
+        description: b.description ?? "",
+        coverImageUrl: b.coverImageUrl ?? ""
       });
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load book");
@@ -99,6 +114,15 @@ She liked that a library could hold thousands of voices and still feel peaceful.
     }
   }
 
+  async function loadSuggestions() {
+    try {
+      const data = await listBooks();
+      setAllBooks(data as any[]);
+    } catch {
+      // keep silent; suggestions are non-critical
+    }
+  }
+
   useEffect(() => {
     setOk(null);
     setErr(null);
@@ -109,6 +133,7 @@ She liked that a library could hold thousands of voices and still feel peaceful.
     setPageIndex(0);
     loadBook();
     loadLoans();
+    loadSuggestions();
   }, [id]);
 
   async function onSave() {
@@ -122,13 +147,14 @@ She liked that a library could hold thousands of voices and still feel peaceful.
 
     setBusy(true);
     try {
-      const updated = await updateBook(id, {
+      const updated: any = await updateBook(id, {
         title: form.title.trim(),
         author: form.author.trim(),
         category: form.category.trim(),
         year: Number(form.year),
         isbn: form.isbn?.trim() || undefined,
-        description: form.description?.trim() || undefined
+        description: form.description?.trim() || undefined,
+        coverImageUrl: (form as any).coverImageUrl?.trim() || undefined
       });
       setBook(updated);
       setEdit(false);
@@ -193,7 +219,7 @@ She liked that a library could hold thousands of voices and still feel peaceful.
   }
 
   return (
-    <div className="bookDetailsShell modernDetailsShell">
+    <div className="bookDetailsShell modernDetailsShell luxuryDetailsShell">
       <div className="toolbar">
         <button className="btn secondary bookBackBar" onClick={onBack} type="button">
           ← Back
@@ -201,22 +227,10 @@ She liked that a library could hold thousands of voices and still feel peaceful.
 
         {isAdmin && !edit && (
           <>
-            <button
-              className="btn secondary"
-              style={{ marginTop: 0 }}
-              onClick={() => setEdit(true)}
-              disabled={busy || loanBusy}
-              type="button"
-            >
+            <button className="btn secondary" style={{ marginTop: 0 }} onClick={() => setEdit(true)} disabled={busy || loanBusy} type="button">
               Edit
             </button>
-            <button
-              className="btn danger"
-              style={{ marginTop: 0 }}
-              onClick={() => setShowDelete(true)}
-              disabled={busy || loanBusy}
-              type="button"
-            >
+            <button className="btn danger" style={{ marginTop: 0 }} onClick={() => setShowDelete(true)} disabled={busy || loanBusy} type="button">
               Delete
             </button>
           </>
@@ -228,14 +242,19 @@ She liked that a library could hold thousands of voices and still feel peaceful.
       {ok && <div className="msg ok">{ok}</div>}
 
       {book && !edit && (
-        <section className="bookDetailsCard modernDetailsCard">
+        <section className="bookDetailsCard modernDetailsCard luxuryDetailsCard">
           <div className="bookDetailsCoverWrap modernDetailsCoverWrap">
-            <BookCover title={book.title} category={book.category} className="bookDetailsCover" />
+            <BookCover
+              title={book.title}
+              category={book.category}
+              className="bookDetailsCover"
+              coverImageUrl={(book as any).coverImageUrl}
+            />
           </div>
 
           <div className="bookDetailsBody modernDetailsBody">
             <div className="bookDetailsHeader modernDetailsHeader">
-              <div className="eyebrowTag">Featured Title</div>
+              <div className="eyebrowTag">Signature Edition</div>
               <h1 className="bookDetailsTitle modernBookTitle">{book.title}</h1>
               <div className="bookAuthorLine">{book.author}</div>
 
@@ -339,6 +358,45 @@ She liked that a library could hold thousands of voices and still feel peaceful.
               )}
             </div>
 
+            {relatedBooks.length > 0 && (
+              <div className="surfaceCard relatedBooksPanel">
+                <div className="sectionTitle">You may also like</div>
+                <div className="sectionSubtitle">
+                  Similar books selected by genre and author proximity.
+                </div>
+
+                <div className="relatedBooksGrid">
+                  {relatedBooks.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="relatedBookCard"
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        onChanged();
+                        onBack();
+                        setTimeout(() => {
+                          window.location.hash = `book-${item.id}`;
+                        }, 0);
+                      }}
+                    >
+                      <BookCover
+                        title={item.title}
+                        category={item.category}
+                        className="relatedBookThumb"
+                        coverImageUrl={item.coverImageUrl}
+                      />
+                      <div className="relatedBookBody">
+                        <div className="relatedBookTitle">{item.title}</div>
+                        <div className="relatedBookMeta">{item.author}</div>
+                        <div className="relatedBookMeta">{item.category}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="bookActionRow modernActionRow">
               {!activeLoanForThisBook ? (
                 <button className="btn primary" onClick={onBorrow} disabled={busy || loanBusy} type="button">
@@ -361,7 +419,7 @@ She liked that a library could hold thousands of voices and still feel peaceful.
       {book && edit && (
         <div className="surfaceCard">
           <div className="sectionTitle">Edit Book</div>
-          <div className="sectionSubtitle">Update metadata and description for this title.</div>
+          <div className="sectionSubtitle">Update metadata, description, and premium cover for this title.</div>
 
           <label>Title</label>
           <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />
@@ -377,6 +435,13 @@ She liked that a library could hold thousands of voices and still feel peaceful.
 
           <label>ISBN</label>
           <input value={form.isbn ?? ""} onChange={(e) => setForm((p) => ({ ...p, isbn: e.target.value }))} />
+
+          <label>Cover Image URL</label>
+          <input
+            value={(form as any).coverImageUrl ?? ""}
+            onChange={(e) => setForm((p) => ({ ...p, coverImageUrl: e.target.value } as any))}
+            placeholder="https://..."
+          />
 
           <label>Description</label>
           <textarea rows={5} value={form.description ?? ""} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />

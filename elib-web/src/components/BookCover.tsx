@@ -3,12 +3,22 @@ import { coverGradient } from "../utils/bookVisuals";
 export default function BookCover({
   title,
   category,
-  className = ""
+  className = "",
+  coverImageUrl
 }: {
   title: string;
   category: string;
   className?: string;
+  coverImageUrl?: string | null;
 }) {
+  if (coverImageUrl?.trim()) {
+    return (
+      <div className={`book-cover real-cover ${className}`.trim()} aria-label={`${title} cover`}>
+        <img src={coverImageUrl} alt={title} className="book-cover__img" />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`book-cover ${className}`.trim()}

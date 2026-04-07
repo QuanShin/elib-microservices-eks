@@ -9,12 +9,14 @@ export type BookListItem = {
   publisher?: string | null;
   price?: number | null;
   publishMonth?: string | null;
+  coverImageUrl?: string | null;
 };
 
 export type Book = BookListItem & {
   description?: string | null;
   isbn?: string | null;
   createdAtUtc?: string;
+  coverImageUrl?: string | null;
 };
 
 export type BookCreate = {
@@ -27,6 +29,7 @@ export type BookCreate = {
   price?: number;
   publishMonth?: string;
   isbn?: string;
+  coverImageUrl?: string | null;
 };
 
 // Use same-origin proxy through nginx/Vite.
