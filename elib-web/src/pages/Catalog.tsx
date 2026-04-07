@@ -6,7 +6,7 @@ type Props = {
   onSelect: (id: number) => void;
 };
 
-type SortMode = "title" | "year-desc" | "year-asc";
+type SortMode = "featured" | "title" | "year-desc" | "year-asc";
 
 export default function Catalog({ onSelect }: Props) {
   const [books, setBooks] = useState<BookListItem[]>([]);
@@ -15,7 +15,7 @@ export default function Catalog({ onSelect }: Props) {
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("ALL");
-  const [sortBy, setSortBy] = useState<SortMode>("title");
+  const [sortBy, setSortBy] = useState<SortMode>("featured");
 
   async function load() {
     setErr(null);
@@ -42,34 +42,48 @@ export default function Catalog({ onSelect }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    const result = books.filter((b) => {
+    const result = books.filter((b: any) => {
       const matchQ =
         !q ||
         b.title.toLowerCase().includes(q) ||
         b.author.toLowerCase().includes(q) ||
-        b.category.toLowerCase().includes(q);
+        b.category.toLowerCase().includes(q) ||
+        (b.description ?? "").toLowerCase().includes(q);
 
       const matchC = category === "ALL" || b.category === category;
       return matchQ && matchC;
     });
 
-    result.sort((a, b) => {
+    result.sort((a: any, b: any) => {
       if (sortBy === "year-desc") return b.year - a.year;
       if (sortBy === "year-asc") return a.year - b.year;
-      return a.title.localeCompare(b.title);
+      if (sortBy === "title") return a.title.localeCompare(b.title);
+
+      const aScore =
+        (a.coverImageUrl ? 2 : 0) +
+        (a.description ? 1 : 0) +
+        Math.min(1, (a.title?.length ?? 0) / 100);
+
+      const bScore =
+        (b.coverImageUrl ? 2 : 0) +
+        (b.description ? 1 : 0) +
+        Math.min(1, (b.title?.length ?? 0) / 100);
+
+      return bScore - aScore;
     });
 
     return result;
   }, [books, query, category, sortBy]);
 
   return (
-    <div className="surfaceCard catalogSurface premiumCatalog">
-      <div className="catalogHero">
-        <div>
-          <div className="eyebrowTag">Curated Collection</div>
-          <div className="sectionTitle">Discover Books</div>
-          <div className="sectionSubtitle">
-            Explore a premium digital collection with elegant search, genre discovery, and detailed reading previews.
+    <div className="surfaceCard luxuryCatalogShell">
+      <div className="luxuryCatalogHero">
+        <div className="luxuryCatalogIntro">
+          <div className="eyebrowTag">Editorial Selection</div>
+          <div className="sectionTitle luxuryCatalogTitle">Library Collection</div>
+          <div className="sectionSubtitle luxuryCatalogSubtitle">
+            Discover curated titles, refined by category, author, and relevance.
+            Browse the collection in a cleaner, premium reading-first experience.
           </div>
         </div>
 
@@ -80,15 +94,15 @@ export default function Catalog({ onSelect }: Props) {
           disabled={busy}
           type="button"
         >
-          {busy ? "Loading…" : "Reload"}
+          {busy ? "Refreshing…" : "Reload"}
         </button>
       </div>
 
-      <div className="catalogFilters">
-        <div className="catalogSearchWrap">
+      <div className="luxuryCatalogFilters">
+        <div className="luxurySearchBlock">
           <label>Search</label>
           <input
-            placeholder="Search by title, author, or genre…"
+            placeholder="Search by title, author, description, or category…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -106,8 +120,9 @@ export default function Catalog({ onSelect }: Props) {
         </div>
 
         <div>
-          <label>Sort by</label>
+          <label>Sort</label>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortMode)}>
+            <option value="featured">Featured</option>
             <option value="title">Title</option>
             <option value="year-desc">Newest</option>
             <option value="year-asc">Oldest</option>
@@ -115,12 +130,12 @@ export default function Catalog({ onSelect }: Props) {
         </div>
       </div>
 
-      <div className="catalogToolbar">
+      <div className="luxuryCatalogToolbar">
         <div className="muted small">
-          {busy ? "Loading library…" : `${filtered.length} result${filtered.length === 1 ? "" : "s"} found`}
+          {busy ? "Refreshing collection…" : `${filtered.length} result${filtered.length === 1 ? "" : "s"} found`}
         </div>
 
-        {(query || category !== "ALL" || sortBy !== "title") && (
+        {(query || category !== "ALL" || sortBy !== "featured") && (
           <button
             className="btn secondary"
             style={{ marginTop: 0, width: "auto", padding: "8px 12px" }}
@@ -128,7 +143,7 @@ export default function Catalog({ onSelect }: Props) {
             onClick={() => {
               setQuery("");
               setCategory("ALL");
-              setSortBy("title");
+              setSortBy("featured");
             }}
           >
             Clear filters
@@ -138,54 +153,64 @@ export default function Catalog({ onSelect }: Props) {
 
       {err && <div className="msg error">{err}</div>}
 
-      <div className="catalogGrid premiumCatalogGrid">
-        {filtered.map((b: any) => (
-          <button
-            key={b.id}
-            className="bookCard premiumBookCard"
-            onClick={() => onSelect(b.id)}
-            type="button"
-          >
-            <div className="premiumBookRow">
-              <BookCover
-                title={b.title}
-                category={b.category}
-                className="bookThumb premiumThumb"
-                coverImageUrl={b.coverImageUrl}
-              />
+      <div className="luxuryCatalogGrid">
+        {filtered.map((b: any) => {
+          const snippet =
+            (b.description?.trim() ||
+              "Open this title to view its full details, sample reading section, and related recommendations.")
+              .replace(/\s+/g, " ")
+              .slice(0, 150);
 
-              <div className="premiumBookBody">
-                <div className="premiumBookTop">
-                  <div className="bookTitle premiumBookTitle">{b.title}</div>
-                  <div className="muted small premiumAuthor">{b.author}</div>
+          return (
+            <button
+              key={b.id}
+              className="luxuryBookCard"
+              onClick={() => onSelect(b.id)}
+              type="button"
+            >
+              <div className="luxuryBookCardInner">
+                <div className="luxuryBookCoverCol">
+                  <BookCover
+                    title={b.title}
+                    category={b.category}
+                    className="bookThumb"
+                    coverImageUrl={(b as any).coverImageUrl}
+                  />
                 </div>
 
-                <div className="bookDetailsMeta premiumMetaRow">
-                  <span className="metaTag">{b.category}</span>
-                  <span className="metaTag">{b.year}</span>
-                </div>
+                <div className="luxuryBookContent">
+                  <div className="luxuryBookTop">
+                    <div className="bookTitle luxuryBookTitle">{b.title}</div>
+                    <div className="luxuryBookAuthor">{b.author}</div>
+                  </div>
 
-                <div className="premiumBookSnippet">
-                  {(b.description?.trim() || "Open this book to explore details, reading preview, and related recommendations.").slice(0, 140)}
-                  {(b.description?.trim()?.length ?? 0) > 140 ? "…" : ""}
-                </div>
+                  <div className="bookDetailsMeta luxuryMetaRow">
+                    <span className="metaTag">{b.category}</span>
+                    <span className="metaTag">{b.year}</span>
+                  </div>
 
-                <div className="premiumBookFooter">
-                  <span className="catalogActionHint">View details</span>
+                  <div className="luxuryBookDescription">
+                    {snippet}
+                    {(b.description?.trim()?.length ?? 0) > 150 ? "…" : ""}
+                  </div>
+
+                  <div className="luxuryBookFooter">
+                    <span className="luxuryActionHint">View details</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
 
       {!busy && filtered.length === 0 && (
-        <div className="surfaceCard emptyStateCard" style={{ marginTop: 16 }}>
+        <div className="surfaceCard luxuryEmptyState">
           <div className="sectionTitle" style={{ fontSize: "1rem" }}>
             No matches found
           </div>
           <div className="sectionSubtitle">
-            Try another title, author, category, or sorting option.
+            Try a different title, author, or category filter.
           </div>
         </div>
       )}

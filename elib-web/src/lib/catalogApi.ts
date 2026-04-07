@@ -16,7 +16,6 @@ export type Book = BookListItem & {
   description?: string | null;
   isbn?: string | null;
   createdAtUtc?: string;
-  coverImageUrl?: string | null;
 };
 
 export type BookCreate = {

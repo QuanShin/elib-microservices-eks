@@ -180,7 +180,7 @@ app.MapPost("/borrow/checkout/{bookId:int}", async (
         return Results.NotFound(new { error = "Book not found." });
 
     var activeCount = await db.Loans.CountAsync(x => x.UserId == userId && x.ReturnedAtUtc == null);
-    if (activeCount >= 3)
+    if (activeCount >= 20)
         return Results.BadRequest(new { error = "Loan limit reached." });
 
     var alreadyBorrowed = await db.Loans.AnyAsync(x =>

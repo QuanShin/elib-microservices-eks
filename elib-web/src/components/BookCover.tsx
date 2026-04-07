@@ -11,10 +11,12 @@ export default function BookCover({
   className?: string;
   coverImageUrl?: string | null;
 }) {
-  if (coverImageUrl?.trim()) {
+  const finalCover = coverImageUrl?.trim() || "/covers/cover.jpeg";
+
+  if (finalCover) {
     return (
       <div className={`book-cover real-cover ${className}`.trim()} aria-label={`${title} cover`}>
-        <img src={coverImageUrl} alt={title} className="book-cover__img" />
+        <img src={finalCover} alt={title} className="book-cover__img" />
       </div>
     );
   }

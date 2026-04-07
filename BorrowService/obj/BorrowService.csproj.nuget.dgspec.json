@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ADMIN\\desktop\\elib-auth\\BorrowService\\BorrowService.csproj": {}
+    "C:\\Users\\ADMIN\\Desktop\\elib-auth\\borrowservice\\BorrowService.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ADMIN\\desktop\\elib-auth\\BorrowService\\BorrowService.csproj": {
+    "C:\\Users\\ADMIN\\Desktop\\elib-auth\\borrowservice\\BorrowService.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ADMIN\\desktop\\elib-auth\\BorrowService\\BorrowService.csproj",
+        "projectUniqueName": "C:\\Users\\ADMIN\\Desktop\\elib-auth\\borrowservice\\BorrowService.csproj",
         "projectName": "BorrowService",
-        "projectPath": "C:\\Users\\ADMIN\\desktop\\elib-auth\\BorrowService\\BorrowService.csproj",
+        "projectPath": "C:\\Users\\ADMIN\\Desktop\\elib-auth\\borrowservice\\BorrowService.csproj",
         "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ADMIN\\desktop\\elib-auth\\BorrowService\\obj\\",
+        "outputPath": "C:\\Users\\ADMIN\\Desktop\\elib-auth\\borrowservice\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\ADMIN\\AppData\\Roaming\\NuGet\\NuGet.Config"

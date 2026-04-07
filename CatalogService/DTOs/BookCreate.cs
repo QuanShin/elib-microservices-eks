@@ -1,13 +1,14 @@
-namespace CatalogService.DTOs; // Put this DTO in the CatalogService.DTOs namespace.
+namespace CatalogService.DTOs;
 
-public record BookCreate( // DTO for manual book creation from admin UI/API.
-    string Title, // Book title.
-    string Author, // Author name.
-    string Category, // Category.
-    string? Description, // Optional description.
-    string? Publisher, // Optional publisher.
-    decimal? Price, // Optional price.
-    string? PublishMonth, // Optional month.
-    int Year, // Publish year.
-    string? Isbn // Optional ISBN.
+public record BookCreate(
+    string Title,
+    string Author,
+    string Category,
+    string? Description,
+    string? Publisher,
+    decimal? Price,
+    string? PublishMonth,
+    int Year,
+    string? Isbn,
+    string? CoverImageUrl
 );
