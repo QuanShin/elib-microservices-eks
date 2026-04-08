@@ -14,13 +14,23 @@ export type MeResponse = {
   role: string;
 };
 
-let accessToken: string | null = null;
-
 const AUTH_BASE = "/api/auth";
+const ACCESS_TOKEN_KEY = "elib_access_token";
+
+let accessToken: string | null = localStorage.getItem(ACCESS_TOKEN_KEY);
 
 function getCsrfFromCookie() {
   const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
   return m ? decodeURIComponent(m[1]) : null;
+}
+
+function setAccessToken(token: string | null) {
+  accessToken = token;
+  if (token) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
 }
 
 export function getAccessToken() {
@@ -28,7 +38,12 @@ export function getAccessToken() {
 }
 
 export function clearSession() {
-  accessToken = null;
+  setAccessToken(null);
+}
+
+export function restoreSession() {
+  accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  return accessToken;
 }
 
 async function safeError(res: Response) {
@@ -99,7 +114,7 @@ export async function login(email: string, password: string) {
   }
 
   const data = (await res.json()) as LoginResponse;
-  accessToken = data.accessToken;
+  setAccessToken(data.accessToken);
   return data;
 }
 
@@ -125,7 +140,7 @@ export async function renewSession() {
   }
 
   const data = await res.json();
-  accessToken = data.accessToken;
+  setAccessToken(data.accessToken);
   return data;
 }
 

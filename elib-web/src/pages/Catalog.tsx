@@ -159,7 +159,7 @@ export default function Catalog({ onSelect }: Props) {
             (b.description?.trim() ||
               "Open this title to view its full details, sample reading section, and related recommendations.")
               .replace(/\s+/g, " ")
-              .slice(0, 150);
+              .slice(0, 105);
 
           return (
             <button
@@ -191,7 +191,7 @@ export default function Catalog({ onSelect }: Props) {
 
                   <div className="luxuryBookDescription">
                     {snippet}
-                    {(b.description?.trim()?.length ?? 0) > 150 ? "…" : ""}
+                    {(b.description?.trim()?.length ?? 0) > 105 ? "…" : ""}
                   </div>
 
                   <div className="luxuryBookFooter">

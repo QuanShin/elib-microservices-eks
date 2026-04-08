@@ -1,6 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import "./App.css";
-import { login, register, logout, checkMeNoRefresh, renewSession } from "./lib/authApi";
+import {
+  login,
+  register,
+  logout,
+  checkMeNoRefresh,
+  renewSession,
+  restoreSession
+} from "./lib/authApi";
 
 const AddBook = lazy(() => import("./pages/AddBook"));
 const Catalog = lazy(() => import("./pages/Catalog"));
@@ -28,6 +35,7 @@ export default function App() {
 
   const [me, setMe] = useState<Me | null>(null);
   const [busy, setBusy] = useState(false);
+  const [booting, setBooting] = useState(true);
   const [ok, setOk] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -39,6 +47,36 @@ export default function App() {
   useEffect(() => {
     document.title = me ? `E-Library • ${me.email}` : "E-Library • Auth";
   }, [me]);
+
+  useEffect(() => {
+    async function bootstrapAuth() {
+      try {
+        const token = restoreSession();
+
+        if (!token) {
+          setBooting(false);
+          return;
+        }
+
+        try {
+          const profile = await checkMeNoRefresh();
+          setMe(profile);
+        } catch {
+          try {
+            await renewSession();
+            const profile = await checkMeNoRefresh();
+            setMe(profile);
+          } catch {
+            setMe(null);
+          }
+        }
+      } finally {
+        setBooting(false);
+      }
+    }
+
+    bootstrapAuth();
+  }, []);
 
   function clearFlash() {
     setErr(null);
@@ -109,6 +147,8 @@ export default function App() {
     clearFlash();
     try {
       await renewSession();
+      const profile = await checkMeNoRefresh();
+      setMe(profile);
       setOk("Session renewed ✅");
       setTimeout(() => setOk(null), 1500);
     } catch (e: any) {
@@ -189,8 +229,20 @@ export default function App() {
             }}
           />
         )}
+
         {view === "admin" && isAdmin && <AdminDashboard onBack={goCatalog} />}
       </Suspense>
+    );
+  }
+
+  if (booting) {
+    return (
+      <div className="authWrap">
+        <div className="authCard">
+          <div className="title">E-Library</div>
+          <div className="subtitle">Restoring session…</div>
+        </div>
+      </div>
     );
   }
 
@@ -211,9 +263,7 @@ export default function App() {
               <div className="heroText">
                 <div className="heroKicker">Modern library workspace</div>
                 <h1>A secured digital library experience.</h1>
-                <p className="muted">
-                  Final Year Project
-                </p>
+                <p className="muted">Final Year Project</p>
               </div>
               <div className="heroBooks">
                 <div className="heroBook heroBook1" />

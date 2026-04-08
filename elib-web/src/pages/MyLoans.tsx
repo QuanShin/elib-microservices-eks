@@ -143,8 +143,8 @@ export default function MyLoans({
     const book = bookMap[l.bookId] ?? null;
 
     const title = book ? book.title : `Book ID: ${l.bookId}`;
-    const author = book?.author ?? "Unknown author";
-    const category = book?.category ?? "Unavailable";
+    const author = (book?.author ?? "Unknown author").slice(0, 42);
+    const category = (book?.category ?? "Unavailable").slice(0, 34);
     const year = book?.year ?? "—";
 
     const dueDays = !isHistory ? daysLeft(l.dueAtUtc) : null;
