@@ -256,7 +256,7 @@ export default function App() {
                 <div className="title">E-Library</div>
                 <div className="subtitle">Bright UI • Auth + Catalog + Borrow</div>
               </div>
-              <span className="chip">LOCAL DEV</span>
+              <span className="chip">CLOUD DEPLOYMENT: EKS</span>
             </div>
 
             <div className="heroBanner">
