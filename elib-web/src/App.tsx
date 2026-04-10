@@ -262,7 +262,7 @@ export default function App() {
             <div className="heroBanner">
               <div className="heroText">
                 <div className="heroKicker">Modern library workspace</div>
-                <h1>A secured digital library experience. Testing</h1>
+                <h1>A secured digital library experience.</h1>
                 <p className="muted">Final Year Project</p>
               </div>
               <div className="heroBooks">
