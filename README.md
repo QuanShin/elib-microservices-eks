@@ -18,7 +18,7 @@ eLib is a microservices-based digital library system with:
 
 ## 2. High-level architecture
 
-![System Component UML](diagrams/01_system_component_uml.png)
+![System Component UML](diagram/01_system_component_uml.png)
 
 ### Summary
 - The **web frontend** and **Flutter mobile app** both consume the same backend services.
@@ -31,7 +31,7 @@ eLib is a microservices-based digital library system with:
 
 ## 3. AWS deployment architecture
 
-![AWS Architecture](diagrams/03_aws_architecture.png)
+![AWS Architecture](diagram/03_aws_architecture.png)
 
 ### Deployed AWS resources
 - **Amazon EKS** for Kubernetes orchestration
@@ -53,7 +53,7 @@ eLib is a microservices-based digital library system with:
 
 ## 4. CI/CD pipeline
 
-![CI/CD Pipeline](diagrams/04_cicd_pipeline.png)
+![CI/CD Pipeline](diagram/04_cicd_pipeline.png)
 
 ### Pipeline stages
 1. Developer pushes code to GitHub
@@ -73,7 +73,7 @@ eLib is a microservices-based digital library system with:
 
 ## 5. Data model / ERD
 
-![ERD](diagrams/02_erd.png)
+![ERD](diagram/02_erd.png)
 
 ### Core entities
 - **Users**
@@ -90,7 +90,7 @@ eLib is a microservices-based digital library system with:
 
 ## 6. API design and connection model
 
-![API Routing](diagrams/08_api_routing.png)
+![API Routing](diagram/08_api_routing.png)
 
 The public entry point is the web frontend behind the AWS ALB. The Nginx configuration in `elib-web/nginx.conf` routes API traffic to backend services:
 
@@ -145,7 +145,7 @@ Internal service routes:
 
 ## 7. Authentication flow
 
-![Authentication Sequence](diagrams/05_sequence_auth.png)
+![Authentication Sequence](diagram/05_sequence_auth.png)
 
 ### Flow
 1. User submits email and password
@@ -164,7 +164,7 @@ Internal service routes:
 
 ## 8. Borrow and return flow
 
-![Borrow and Return Sequence](diagrams/06_sequence_borrow_return.png)
+![Borrow and Return Sequence](diagram/06_sequence_borrow_return.png)
 
 ### Borrow flow
 1. Client loads the book list from CatalogService
@@ -185,7 +185,7 @@ Internal service routes:
 
 ## 9. UI / client structure
 
-![Mobile and Web UI Flow](diagrams/07_mobile_web_ui_flow.png)
+![Mobile and Web UI Flow](diagram/07_mobile_web_ui_flow.png)
 
 ### Web frontend
 - Login
